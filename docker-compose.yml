@@ -1,7 +1,7 @@
 services:
   spectrom:
     build: .
-    image: spectrom-standalone:1.0.0
+    image: spectrom-standalone:1.0.1
     restart: unless-stopped
     ports:
       - "127.0.0.1:8484:8484"   # SPECTROM has no login: keep it on this computer

@@ -1,6 +1,6 @@
 ![SPECTROM — juegos de ZX Spectrum, probados y listos para jugar](docs/images/header-es.png)
 
-# SPECTROM
+<h1><img src="docs/images/spectrom-title.png" alt="SPECTROM" height="32"></h1>
 
 [English](README.md) · **Español**
 
@@ -13,7 +13,7 @@ ficha. Después lo juegas con un clic y guardas tu partida en 5 ranuras.
 Es una única aplicación Node.js que se ejecuta en tu propio ordenador. Sin cuentas y sin nube: todo se guarda en la carpeta
 `data/`.
 
-Versión **1.0.0** · licencia **GPL-3.0-or-later** · ver [CHANGELOG.md](CHANGELOG.md)
+Versión **1.0.1** · licencia **GPL-3.0-or-later** · ver [CHANGELOG.md](CHANGELOG.md)
 
 ## Solo juegos que se pueden distribuir
 

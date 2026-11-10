@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Plastikelectrik — GNU GPL v3 or later (see LICENSE).
 (function () {
     'use strict';
-    const VERSION = '1.0.0';
+    const VERSION = '1.0.1';
     const API = (window.SPECTROM_API || (location.origin + '/api'));
     const VENDOR = (window.SPECTROM_VENDOR || '/jsspeccy/');
     const $ = (s, r) => (r || document).querySelector(s);
@@ -303,7 +303,8 @@
 .zx-vol input{width:90px;accent-color:#ffff00}
 .zx-chip.btn{cursor:pointer}.zx-chip.btn:hover{border-color:#ffff00;color:#ffff00}
 .zx-footer{margin-top:22px;font-size:10.5px;color:#55555f;line-height:1.6;position:relative;z-index:1}
-.zx-footer a{color:#77778a}`;
+.zx-footer a{color:#77778a}
+.zx-inl{vertical-align:-1px;display:inline;height:.8em!important;width:auto}`;
 
     function toast(msg, err) {
         const t = document.createElement('div'); t.className = 'zx-toast' + (err ? ' err' : ''); t.textContent = msg;
@@ -699,7 +700,7 @@
             el.innerHTML = '<div class="zx-h">Saved games</div><p style="color:#aaa">Reading…</p>';
             const list = await this.listSaves(), by = {}; list.forEach((x) => { by[x.slot] = x; });
             el.innerHTML = `<div class="zx-h">Saved games — ${esc(g.title || '')}</div>
-                <p style="font-size:12px;color:#bbb;line-height:1.6;margin:0">The whole Spectrum is saved (memory, processor, 128K banks and sound chip) as a standard <b>.Z80</b> snapshot in the <b>data/saves</b> folder of SPECTROM.
+                <p style="font-size:12px;color:#bbb;line-height:1.6;margin:0">The whole Spectrum is saved (memory, processor, 128K banks and sound chip) as a standard <b>.Z80</b> snapshot in the <b>data/saves</b> folder of ${romImg('SPECTROM', 2, '#bbbbbb', null, 'zx-inl')}.
                 AUTO is written every time you power off the game. <span class="zx-key">F6</span> continues the most recent save.</p>
                 <div class="zx-saves">${SLOTS.map((sl) => { const x = by[sl]; return `<div class="zx-slot ${x ? 'has' : ''} ${sl === 'auto' ? 'auto' : ''}">
                     <div class="th" ${x && x.thumb ? `style="background-image:url('${esc(x.thumb)}')"` : ''}>${x && x.thumb ? '' : (x ? '' : 'EMPTY')}</div>
@@ -781,7 +782,7 @@
             <div class="zx-chips" data-chips><span class="zx-chip">Connecting…</span></div></div>
             <div class="zx-tabs">${[['library', 'LIBRARY'], ['agent', 'AI AGENT'], ['load', 'LOAD TAPE']].map(([k, l]) => `<button class="zx-tab ${k === this.tab ? 'on' : ''}" data-tab-x="${k}">${l}</button>`).join('')}</div>
             <div data-view></div>
-            <div class="zx-footer">Emulator core: <a href="https://github.com/gasman/jsspeccy3" target="_blank" rel="noopener">JSSpeccy 3</a> by Matt Westcott (GPL-3.0, source and licence in /jsspeccy/). Game data: <a href="https://github.com/zxdb/ZXDB" target="_blank" rel="noopener">ZXDB</a>. Spectrum ROMs © Amstrad, distributed with permission for use in emulators. SPECTROM only downloads and plays games whose rights holders allow distribution; titles marked © are listed only. <a href="https://github.com/Plastikelectrik/spectrom-standalone" target="_blank" rel="noopener">SPECTROM standalone</a> · GPL-3.0</div>`;
+            <div class="zx-footer">Emulator core: <a href="https://github.com/gasman/jsspeccy3" target="_blank" rel="noopener">JSSpeccy 3</a> by Matt Westcott (GPL-3.0, source and licence in /jsspeccy/). Game data: <a href="https://github.com/zxdb/ZXDB" target="_blank" rel="noopener">ZXDB</a>. Spectrum ROMs © Amstrad, distributed with permission for use in emulators. ${romImg('SPECTROM', 2, '#55555f', null, 'zx-inl')} only downloads and plays games whose rights holders allow distribution; titles marked © are listed only. <a href="https://github.com/Plastikelectrik/spectrom-standalone" target="_blank" rel="noopener">${romImg('SPECTROM', 2, '#77778a', null, 'zx-inl')} standalone</a> · GPL-3.0</div>`;
             this.root.addEventListener('click', (ev) => {
                 if (ev.target.closest('button,.zx-card,.zx-tab,[data-sound]')) SFX.click();
                 const t = ev.target.closest('[data-tab-x]'); if (t) this.show(t.dataset.tabX);
@@ -869,7 +870,7 @@
             const facts = [['Year', g.year], ['Publisher', (g.publishers || []).join(', ')], ['Authors', (g.authors || []).join(', ')], ['Genre', g.genre], ['Machine', g.machine + (g.testedMachine ? ' · tested on ' + g.testedMachine + 'K' : '')],
                 ['Players', g.players], ['Language', g.language ? g.language.toUpperCase() : ''], ['Rating', g.votes ? '★ ' + Number(g.score).toFixed(2) + ' (' + g.votes + ' votes)' : ''], ['Rights', g.availabilityText], ['Agent test', g.test ? g.test.reason : (g.failReason || '')], ['Source', g.source ? g.source.label || g.source.id : ''], ['Added', g.addedAt ? new Date(g.addedAt).toLocaleString() : '']]
                 .filter((x) => x[1]).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
-            const keys = (g.keys || []).length ? `<table class="zx-keys">${g.keys.map((k) => `<tr><td style="width:90px"><span class="zx-key">${esc(k.key)}</span></td><td>${esc(k.action)}</td></tr>`).join('')}</table>` : '<p style="color:#999;font-size:12px">The original instructions have no key list the agent could read. Most games use Q A O P + SPACE or a joystick (arrows + Ctrl in SPECTROM).</p>';
+            const keys = (g.keys || []).length ? `<table class="zx-keys">${g.keys.map((k) => `<tr><td style="width:90px"><span class="zx-key">${esc(k.key)}</span></td><td>${esc(k.action)}</td></tr>`).join('')}</table>` : '<p style="color:#999;font-size:12px">The original instructions have no key list the agent could read. Most games use Q A O P + SPACE or a joystick (arrows + Ctrl in ' + romImg('SPECTROM', 2, '#999999', null, 'zx-inl') + ').</p>';
             m.innerHTML = `<div class="zx-sheet"><div class="zx-sheet-top">${romImg(String(g.title).toUpperCase().slice(0, 34), 2, '#000000')}<button class="x" data-x>✕</button></div>
             <div class="zx-sheet-body"><div>
                 ${imgs.length ? `<img class="zx-gal-main" src="${esc(imgs[0].url)}" alt=""><div class="zx-gal-cap" data-cap>${esc(capt[imgs[0].name] || imgs[0].name)}</div>
@@ -883,7 +884,7 @@
                 ${g.tips ? `<p class="zx-desc" style="color:#ffff00">TIP: ${esc(g.tips)}</p>` : ''}
                 <dl class="zx-facts">${facts}</dl>
                 ${g.notes ? `<div class="zx-h">Notes (ZXDB)</div><p class="zx-desc" style="font-size:12px;white-space:pre-line">${esc(g.notes)}</p>` : ''}
-                ${g.copyright ? `<div class="zx-copy-note"><b>© ${esc(g.availabilityText)}.</b> Its rights holders do not allow its distribution, so SPECTROM only shows its sheet: it never looks for, downloads or plays this game. Look for an authorised release (re-releases, the publisher, the author) to play it.</div>` : ''}
+                ${g.copyright ? `<div class="zx-copy-note"><b>© ${esc(g.availabilityText)}.</b> Its rights holders do not allow its distribution, so ${romImg('SPECTROM', 2, '#ffb3b3', null, 'zx-inl')} only shows its sheet: it never looks for, downloads or plays this game. Look for an authorised release (re-releases, the publisher, the author) to play it.</div>` : ''}
                 <div class="zx-actions">
                     ${playable ? `<button class="zx-btn go" data-play style="font-size:14px;padding:12px 20px"><i class="fas fa-play"></i> LOAD ""</button>` : ''}
                     ${(g.status === 'failed' && !g.copyright) ? '<button class="zx-btn yel" data-again><i class="fas fa-rotate"></i> SEARCH AGAIN</button>' : ''}
@@ -928,7 +929,7 @@
         renderAgent(v) {
             v.innerHTML = `<div class="zx-agent">
                 <div class="zx-box zx-live"><h3><i class="fas fa-tv"></i> Live test monitor — the agent team at work <button class="zx-btn" data-livesnd style="float:right;padding:4px 8px;font-size:10px">${prefs().liveSound ? '🔊 SOUND ON' : '🔈 SOUND OFF'}</button></h3>
-                    <div class="zx-live-grid"><div class="zx-tv"><canvas width="256" height="192" data-tv></canvas><div class="zx-tv-label" data-tvl>SPECTROM AGENT</div><div class="zx-tv-step" data-tvs>idle</div><div class="zx-stamp" data-stamp></div></div>
+                    <div class="zx-live-grid"><div class="zx-tv"><canvas width="256" height="192" data-tv></canvas><div class="zx-tv-label" data-tvl>${romImg('SPECTROM AGENT', 2, '#00ffff', null, 'zx-inl')}</div><div class="zx-tv-step" data-tvs>idle</div><div class="zx-stamp" data-stamp></div></div>
                     <div class="zx-team">${[['curator', 'fa-brain', 'AI CURATOR', 'Plans the hunt with the local AI'], ['scout', 'fa-satellite-dish', 'SCOUT', 'Finds the tape and its instructions'], ['tester', 'fa-microchip', 'TESTER', 'Boots it on a headless Spectrum'], ['archivist', 'fa-book-open', 'ARCHIVIST', 'Writes the game sheet']]
                         .map(([k, ic, n, d]) => `<div class="zx-role" data-role="${k}"><i class="fas ${ic} ic"></i><div><b>${n}</b><small data-rs>${d}</small></div></div>`).join('')}
                         <div style="font-size:11px;color:#777;line-height:1.6">Every test is recorded by the headless Spectrum and replayed here: tape loading, title screen, the agent pressing keys, and the verdict.</div></div></div></div>

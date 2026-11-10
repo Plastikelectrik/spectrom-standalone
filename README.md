@@ -1,6 +1,6 @@
 ![SPECTROM — ZX Spectrum games, tested and ready to play](docs/images/header-en.png)
 
-# SPECTROM
+<h1><img src="docs/images/spectrom-title.png" alt="SPECTROM" height="32"></h1>
 
 **English** · [Español](README.es.md)
 
@@ -13,7 +13,7 @@ your progress in 5 slots.
 It is a single Node.js app that runs on your own computer. There are no accounts and no cloud: everything is kept in the
 `data/` folder.
 
-Version **1.0.0** · licence **GPL-3.0-or-later** · see [CHANGELOG.md](CHANGELOG.md)
+Version **1.0.1** · licence **GPL-3.0-or-later** · see [CHANGELOG.md](CHANGELOG.md)
 
 ## Only games that may be distributed
 

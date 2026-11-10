@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 — 2026-11-10
+
+- The name SPECTROM is always drawn with the ZX Spectrum ROM font: README title, header and concept images, and
+  every mention inside the app (footer, test monitor, © notes, saved games).
+
 ## 1.0.0 — 2026-11-10
 
 First public release.
