@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 — 2026-11-10
+
+- Complete instructions in the README (English and Spanish): step-by-step installation for Windows, macOS and Linux,
+  a user guide for every part of the app (library, game sheet, AI agent, playing, controls and joysticks, saved games,
+  load tape), local AI with Ollama, running in the background with pm2, Docker, other devices on your network,
+  backups, updating, uninstalling and troubleshooting.
+
 ## 1.0.1 — 2026-11-10
 
 - The name SPECTROM is always drawn with the ZX Spectrum ROM font: README title, header and concept images, and
