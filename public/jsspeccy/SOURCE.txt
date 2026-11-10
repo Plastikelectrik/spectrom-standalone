@@ -1,0 +1,16 @@
+SPECTROM emulator core = JSSpeccy 3.2.0 by Matt Westcott, GPL-3.0 (see COPYING).
+Upstream source: https://github.com/gasman/jsspeccy3 (npm package "jsspeccy" 3.2.0).
+SPECTROM changes (full diff: dev/jsspeccy-3.2.0-spectrom.patch in this repository):
+ - Kempston joystick port wired to a host value (setKempston) instead of always 0
+ - wasm loaded with fetch + WebAssembly.instantiate (works without the application/wasm MIME type)
+ - audio: volume control (gain node) and automatic resume when the browser starts the audio suspended
+ - window.JSSpeccyCore export and Emulator.openData() so the SPECTROM page can feed files it fetched itself
+ - save slots: core exports getMachineType, getBorder, getPagingFlags, getAYRegister, getSelectedAYRegister;
+   worker message getSnapshot (whole machine state) and AY restore in loadSnapshot; Emulator.getSnapshot() / loadState()
+ - the worker and the wasm core inherit the ?v= of jsspeccy.js (no stale cached worker after an update)
+ - 48K tape auto-loader replaced by tape_48.z80 from JSSpeccy 2 (GPL-3.0, same author): the 3.x one fails
+   with "4 Out of memory" on some tapes
+ZX Spectrum ROMs (roms/) are (c) Amstrad plc, who allow their distribution for use with emulators.
+Reproducible build (gives byte-identical files): git clone https://github.com/gasman/jsspeccy3 && git checkout v3.2,
+patch -p1 < dev/jsspeccy-3.2.0-spectrom.patch, npm install (assemblyscript 0.19.23, webpack 5.112), node generator/gencore.js
+generator/core.ts.in build/core.ts, npx asc build/core.ts --target release, webpack with the config renamed to .cjs.

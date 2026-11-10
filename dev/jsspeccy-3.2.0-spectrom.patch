@@ -1,0 +1,238 @@
+diff --git a/generator/core.ts.in b/generator/core.ts.in
+index 81a8347..d73bd11 100644
+--- a/generator/core.ts.in
++++ b/generator/core.ts.in
+@@ -81,6 +81,8 @@ export const LOG_ENTRIES:usize = (&logEntries);
+ 
+ #alloc ayRegisters[14]: u8
+ 
++let kempstonState:u8 = 0;  /* SPECTROM: Kempston joystick */
++export function setKempston(val:u8):void { kempstonState = val; }
+ let requestedSamplesPerFrame:u32 = 0;
+ let samplesPerFrame:u32 = 0;
+ let ayCyclesPerSample:f64 = 0.0;
+@@ -350,6 +352,16 @@ export function setHalted(val:bool):void {
+ export function getHalted():bool {
+     return halted;
+ }
++
++/* SPECTROM: full machine state for save slots */
++export function getMachineType():u32 { return machineType; }
++export function getBorder():u8 { return borderColour; }
++export function getPagingFlags():u8 {
++    /* port 0x7ffd as last written: RAM bank at 0xc000, shadow screen, ROM 1, lock */
++    return u8((memoryPageReadMap[3] & 0x07) | (screenPageIndex == 7 ? 0x08 : 0) | (memoryPageReadMap[0] == rom1Page ? 0x10 : 0) | (pagingLocked ? 0x20 : 0));
++}
++export function getAYRegister(reg:u8):u8 { return readAYRegister(reg); }
++export function getSelectedAYRegister():u8 { return selectedAYRegister; }
+ export function setTapeTraps(val:bool):void {
+     tapeTrapsEnabled = val;
+ }
+@@ -484,7 +496,7 @@ export function readPort(addr:u16):u8 {
+             result = readAYRegister(selectedAYRegister);
+         } else if (!(addr & 0x00e0)) {
+             /* kempston joystick */
+-            result = 0;
++            result = kempstonState;
+         } else if (machineType == 48 || machineType == 128) {
+             /* floating bus */
+             updateFramebuffer();
+diff --git a/runtime/audio.js b/runtime/audio.js
+index 246ee4e..809d8cb 100644
+--- a/runtime/audio.js
++++ b/runtime/audio.js
+@@ -59,7 +59,17 @@ export class AudioHandler {
+                 }
+             }
+         }
+-        this.scriptNode.connect(this.audioContext.destination);
++        /* SPECTROM: volume control + resume if the browser created the context suspended */
++        this.gainNode = this.audioContext.createGain();
++        this.gainNode.gain.value = AudioHandler.volume;
++        this.scriptNode.connect(this.gainNode);
++        this.gainNode.connect(this.audioContext.destination);
++        const ctx = this.audioContext;
++        const resume = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
++        resume();
++        this.unlock = () => { resume(); if (ctx.state === 'running') { document.removeEventListener('keydown', this.unlock, true); document.removeEventListener('pointerdown', this.unlock, true); } };
++        document.addEventListener('keydown', this.unlock, true);
++        document.addEventListener('pointerdown', this.unlock, true);
+ 
+         this.isActive = true;
+ 
+@@ -70,9 +80,16 @@ export class AudioHandler {
+     }
+ 
+     stop() {
+-        this.scriptNode.disconnect(this.audioContext.destination);
++        this.scriptNode.disconnect();
++        if (this.gainNode) this.gainNode.disconnect();
++        if (this.unlock) { document.removeEventListener('keydown', this.unlock, true); document.removeEventListener('pointerdown', this.unlock, true); }
+         this.audioContext.close();
+     }
++    setVolume(v) {
++        AudioHandler.volume = Math.max(0, Math.min(1, v));
++        if (this.gainNode) this.gainNode.gain.value = AudioHandler.volume;
++    }
++    get state() { return this.audioContext ? this.audioContext.state : 'off'; }
+ 
+     frameCompleted(audioBufferLeft, audioBufferRight) {
+         this.frameBuffers[0] = audioBufferLeft;
+@@ -127,3 +144,4 @@ export class AudioHandler {
+ 
+     }
+ }
++AudioHandler.volume = 0.8;
+diff --git a/runtime/jsspeccy.js b/runtime/jsspeccy.js
+index 7550d53..74a25de 100644
+--- a/runtime/jsspeccy.js
++++ b/runtime/jsspeccy.js
+@@ -24,7 +24,8 @@ class Emulator extends EventEmitter {
+     constructor(canvas, opts) {
+         super();
+         this.canvas = canvas;
+-        this.worker = new Worker(new URL('jsspeccy-worker.js', scriptUrl));
++        /* SPECTROM: the worker inherits the ?v= of jsspeccy.js, so a new release is never paired with a cached old worker */
++        this.worker = new Worker(new URL('jsspeccy-worker.js' + new URL(scriptUrl).search, scriptUrl));
+         this.keyboardEnabled = ('keyboardEnabled' in opts) ? opts.keyboardEnabled : true;
+         if (this.keyboardEnabled) {
+             this.keyboardHandler = (opts.keyboardMap == 'recreated')
+@@ -98,7 +99,7 @@ class Emulator extends EventEmitter {
+                 case 'fileOpened':
+                     if (e.data.mediaType == 'tape' && this.autoLoadTapes) {
+                         const TAPE_LOADERS_BY_MACHINE = {
+-                            '48': {'default': 'tapeloaders/tape_48.szx', 'usr0': 'tapeloaders/tape_48.szx'},
++                            '48': {'default': 'tapeloaders/tape_48.z80', 'usr0': 'tapeloaders/tape_48.z80'},  /* SPECTROM: JSSpeccy 2 loader, the 3.x one fails with 'Out of memory' on some tapes */
+                             '128': {'default': 'tapeloaders/tape_128.szx', 'usr0': 'tapeloaders/tape_128_usr0.szx'},
+                             '5': {'default': 'tapeloaders/tape_pentagon.szx', 'usr0': 'tapeloaders/tape_pentagon_usr0.szx'},
+                         };
+@@ -114,6 +115,12 @@ class Emulator extends EventEmitter {
+                         this.emit('openedTapeFile');
+                     }
+                     break;
++                case 'snapshot':  /* SPECTROM: save slots */
++                    if (this.snapshotResolutions && this.snapshotResolutions[e.data.id]) {
++                        this.snapshotResolutions[e.data.id](e.data.snapshot);
++                        delete this.snapshotResolutions[e.data.id];
++                    }
++                    break;
+                 case 'playingTape':
+                     this.tapeIsPlaying = true;
+                     this.emit('playingTape');
+@@ -397,8 +404,35 @@ class Emulator extends EventEmitter {
+         this.pause();
+         this.worker.terminate();
+     }
++
++    /* SPECTROM additions */
++    setVolume(v) { this.audioHandler.setVolume(v); }
++    getAudioState() { return this.audioHandler.state; }
++    setKempston(val) {
++        this.worker.postMessage({message: 'setKempston', value: val});
++    }
++    getSnapshot() {  /* whole machine state: model, registers, RAM pages, border, paging, AY */
++        const id = this.nextFileOpenID++;
++        this.snapshotResolutions = this.snapshotResolutions || {};
++        return new Promise((resolve) => {
++            this.snapshotResolutions[id] = resolve;
++            this.worker.postMessage({message: 'getSnapshot', id});
++        });
++    }
++    loadState(snapshot) {
++        this.machineType = (snapshot.model == 128 || snapshot.model == 5) ? snapshot.model : 48;
++        this.emit('setMachine', this.machineType);
++        return this.loadSnapshot(snapshot);
++    }
++    openData(name, arrayBuffer) {
++        const opener = this.getFileOpener(name);
++        if (!opener) return Promise.reject(new Error('Unrecognised file type: ' + name));
++        return Promise.resolve(opener(arrayBuffer));
++    }
+ }
+ 
++window.JSSpeccyCore = { Emulator, scriptUrl };
++
+ window.JSSpeccy = (container, opts) => {
+     // let benchmarkRunCount = 0;
+     // let benchmarkRenderCount = 0;
+diff --git a/runtime/worker.js b/runtime/worker.js
+index 0d2cba5..078002b 100644
+--- a/runtime/worker.js
++++ b/runtime/worker.js
+@@ -13,8 +13,9 @@ let tape = null;
+ let tapeIsPlaying = false;
+ 
+ const loadCore = (baseUrl) => {
+-    WebAssembly.instantiateStreaming(
+-        fetch(new URL('jsspeccy-core.wasm', baseUrl), {})
++    /* SPECTROM: no dependency on the server sending application/wasm */
++    fetch(new URL('jsspeccy-core.wasm' + new URL(baseUrl).search, baseUrl), {})  /* SPECTROM: same ?v= as jsspeccy.js */.then(r => r.arrayBuffer()).then(
++        buf => WebAssembly.instantiate(buf, {env: {abort: () => { throw new Error('wasm abort'); }}})
+     ).then(results => {
+         core = results.instance.exports;
+         memory = core.memory;
+@@ -54,9 +55,42 @@ const loadSnapshot = (snapshot) => {
+         core.writePort(0x7ffd, snapshot.ulaState.pagingFlags);
+     }
+ 
++    /* SPECTROM: AY sound chip state (save slots) */
++    if (snapshot.ay && snapshot.model != 48) {
++        for (let r = 0; r < 14; r++) {
++            core.writePort(0xfffd, r);
++            core.writePort(0xbffd, snapshot.ay.regs[r] || 0);
++        }
++        core.writePort(0xfffd, snapshot.ay.selected || 0);
++    }
++
+     core.setTStates(snapshot.tstates);
+ };
+ 
++/* SPECTROM: read the whole machine state (save slots) */
++const getSnapshot = () => {
++    const model = core.getMachineType();
++    const pages = (model == 48) ? [5, 2, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
++    const memoryPages = {};
++    pages.forEach(p => {
++        memoryPages[p] = memoryData.slice(core.MACHINE_MEMORY + p * 0x4000, core.MACHINE_MEMORY + (p + 1) * 0x4000);
++    });
++    const registers = {};
++    ['AF', 'BC', 'DE', 'HL', 'AF_', 'BC_', 'DE_', 'HL_', 'IX', 'IY', 'SP', 'IR'].forEach((r, i) => { registers[r] = registerPairs[i]; });
++    registers.PC = core.getPC();
++    registers.iff1 = core.getIFF1() ? 1 : 0;
++    registers.iff2 = core.getIFF2() ? 1 : 0;
++    registers.im = core.getIM();
++    const ay = {selected: core.getSelectedAYRegister(), regs: []};
++    for (let r = 0; r < 14; r++) ay.regs.push(core.getAYRegister(r));
++    return {
++        model, registers, memoryPages, ay,
++        halted: !!core.getHalted(),
++        tstates: core.getTStates(),
++        ulaState: {borderColour: core.getBorder(), pagingFlags: core.getPagingFlags()},
++    };
++};
++
+ const trapTapeLoad = () => {
+     if (!tape) return;
+     const block = tape.getNextLoadableBlock();
+@@ -204,6 +238,11 @@ onmessage = (e) => {
+         case 'loadMemory':
+             loadMemoryPage(e.data.page, e.data.data);
+             break;
++        case 'getSnapshot': {
++            const snap = getSnapshot();
++            postMessage({message: 'snapshot', id: e.data.id, snapshot: snap}, Object.values(snap.memoryPages).map(p => p.buffer));
++            break;
++        }
+         case 'loadSnapshot':
+             loadSnapshot(e.data.snapshot);
+             postMessage({
+@@ -247,6 +286,9 @@ onmessage = (e) => {
+                 });
+             }
+             break;
++        case 'setKempston':
++            core.setKempston(e.data.value & 0x1f);
++            break;
+         case 'setTapeTraps':
+             core.setTapeTraps(e.data.value);
+             break;

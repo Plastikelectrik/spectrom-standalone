@@ -1,0 +1,20 @@
+{
+  "name": "spectrom-standalone",
+  "version": "1.0.0",
+  "description": "ZX Spectrum 48K/128K emulator with an agent that finds, tests and catalogues games whose rights holders allow distribution. Runs on your own computer.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/run-tests.mjs"
+  },
+  "engines": { "node": ">=18.17" },
+  "license": "GPL-3.0-or-later",
+  "author": "Plastikelectrik",
+  "repository": { "type": "git", "url": "https://github.com/Plastikelectrik/spectrom-standalone.git" },
+  "keywords": ["zx-spectrum", "emulator", "retro", "zxdb", "jsspeccy", "games-archive"],
+  "dependencies": {
+    "express": "^5.1.0",
+    "pako": "^2.1.0"
+  }
+}

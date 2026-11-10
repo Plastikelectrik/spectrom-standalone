@@ -1,0 +1,16 @@
+services:
+  spectrom:
+    build: .
+    image: spectrom-standalone:1.0.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8484:8484"   # SPECTROM has no login: keep it on this computer
+    environment:
+      # Optional local AI running on the host
+      SPECTROM_OLLAMA: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - spectrom-data:/app/data
+volumes:
+  spectrom-data:
