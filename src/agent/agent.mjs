@@ -12,7 +12,7 @@ import zlib from 'zlib';
 import { buildIndex } from './zxdb-index.mjs';
 import { testGame, screenToPng, detectFormat } from '../tester/spectest.mjs';
 
-const VERSION = '1.0.2';
+const VERSION = '1.1.0';
 const PORT = Number(process.env.SPECTROM_PORT || 8240);
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const DATA = path.resolve(process.env.SPECTROM_DATA || path.join(HERE, '..', '..', 'data'));
@@ -233,7 +233,7 @@ function gameFileFrom(buf, linkName) {
 }
 
 // ---------- ZXDB index ----------
-const INDEX_VERSION = 2;
+const INDEX_VERSION = 3;   // v3: every picture and document type of ZXDB (gallery)
 async function ensureIndex(force) {
     const fresh = fs.existsSync(F.index) && (Date.now() - fs.statSync(F.index).mtimeMs) < 7 * 86400e3;
     if (!force && fresh) { if (!index) loadIndex(); if (index && index.version === INDEX_VERSION) return; log('ZXDB index is from an older SPECTROM version: rebuilding it'); }
@@ -348,22 +348,48 @@ Only list keys that appear in the instructions.`, ai);
 
 // ---------- images ----------
 function imgKind(link) { const e = link.split('.').pop().toLowerCase(); return e === 'scr' ? 'scr' : ['gif', 'png', 'jpg', 'jpeg'].includes(e) ? e.replace('jpeg', 'jpg') : null; }
-async function fetchImages(g, dir) {
-    const out = [];
-    const pick = (ft, max) => g.img.filter(([t]) => t === ft).slice(0, max);
-    const wanted = [...pick(1, 1).map((x) => ['load', x[1]]), ...pick(2, 2).map((x, i) => ['run' + (i + 1), x[1]]), ...pick(3, 1).map((x) => ['open', x[1]]), ...pick(5, 1).map((x) => ['inlay', x[1]])];
-    for (const [name, link] of wanted) {
-        const kind = imgKind(link); if (!kind) continue;
-        try {
-            if (!hasSource(link)) continue;
-            let buf = (await fetchFromSources(link, 2.5e6, { quiet: true })).buf;
-            let ext = kind;
-            if (kind === 'scr') { if (buf.length < 6912) continue; buf = screenToPng(buf.subarray(0, 6912), 1); ext = 'png'; }
-            fs.writeFileSync(path.join(dir, name + '.' + ext), buf);
-            out.push({ name, ext });
-        } catch (e) { log(`  image ${name}: ${e.message.slice(0, 120)}`, 'warn'); }
+// ---------- gallery: every picture ZXDB lists for a game (screens, inlays, media scans, scanned instructions, maps,
+// artwork, adverts, posters…), fetched from every source that mirrors it. PDFs become links to their public page.
+// Only for titles whose distribution is allowed: the caller never calls this for any other title.
+const GALLERY_V = 2;
+const GALLERY = [   // [ZXDB filetype, picture name prefix, how many at most]
+    [1, 'load', 1], [2, 'run', 4], [3, 'open', 1], [5, 'inlay', 2], [6, 'inlayb', 2], [4, 'inlays', 1], [7, 'media', 4], [29, 'scan', 8], [60, 'booklet', 6],
+    [31, 'map', 8], [38, 'art', 4], [51, 'advert', 4], [42, 'poster', 2], [43, 'poster', 2], [54, 'promo', 4], [30, 'overlay', 2], [33, 'codes', 2]];
+const IMG_MAX = 4e6, GAME_IMG_MAX = 30e6;
+function publicUrl(link) {
+    if (link.startsWith('/zxdb/')) return 'https://spectrumcomputing.co.uk' + enc(link);
+    if (link.startsWith('/pub/')) return 'https://worldofspectrum.net' + enc(link);
+    return null;
+}
+async function fetchImages(g, dir, have) {
+    have = have || new Set();
+    const images = [], docs = [], used = {};
+    let total = 0;
+    for (const [ft, pre, max] of GALLERY) {
+        let n = 0;
+        const reissue = (l) => (/Rereleases|\(/.test(l) ? 1 : 0);   // the original release first
+        for (const x of (g.img || []).filter((y) => y[0] === ft).sort((a, b) => reissue(a[1]) - reissue(b[1]))) {
+            if (n >= max) break;
+            n++;
+            const link = x[1], size = x[2] || 0;
+            used[pre] = (used[pre] || 0) + 1;
+            const name = pre === 'load' || pre === 'open' || (pre === 'inlay' && used[pre] === 1) ? pre : pre + used[pre];
+            const kind = imgKind(link);
+            if (!kind) { if (/\.pdf$/i.test(link) && publicUrl(link)) docs.push({ type: ft, name, url: publicUrl(link), size }); continue; }
+            if (have.has(name) || !hasSource(link) || size > IMG_MAX || total + size > GAME_IMG_MAX) continue;
+            try {
+                let buf = (await fetchFromSources(link, IMG_MAX, { quiet: true })).buf;
+                let ext = kind;
+                if (kind === 'scr') { if (buf.length < 6912) continue; buf = screenToPng(buf.subarray(0, 6912), 1); ext = 'png'; }
+                total += buf.length;
+                fs.writeFileSync(path.join(dir, name + '.' + ext), buf);
+                images.push({ name, ext, type: ft });
+            } catch (e) { log(`  image ${name}: ${e.message.slice(0, 120)}`, 'warn'); }
+        }
     }
-    return out;
+    let k = 0;
+    for (const l of (g.ins || [])) if (/\.pdf$/i.test(l) && publicUrl(l)) docs.push({ type: 28, name: 'insdoc' + (++k), url: publicUrl(l) });
+    return { images, docs };
 }
 
 // ---------- Internet Archive search by title ----------
@@ -478,7 +504,11 @@ async function processGame(g, ai, by) {
     team('archivist', `Writing the game sheet for ${g.t}: images, keys, description`);
     rec.images = [];
     if (test && test.ok) { rec.images.push({ name: 'cover', ext: 'png' }); if (test.png2) rec.images.push({ name: 'shot', ext: 'png' }); }
-    if (!isCopy) rec.images.push(...await fetchImages(g, dir));
+    if (!isCopy) {
+        const gal = await fetchImages(g, dir, new Set(rec.images.map((i) => i.name)));
+        rec.images.push(...gal.images); rec.docs = gal.docs; rec.gallery = GALLERY_V;
+        if (instructions && instructions.trim().length > 20) { fs.writeFileSync(path.join(dir, 'instructions.txt'), instructions.slice(0, 60000)); rec.hasText = true; }
+    }
     else log('  sheet only: ZXDB data, no downloads');
     Object.assign(rec, await buildSheet(g, ai, instructions));
     if (!rec.startKey && rec.test && rec.test.reactsTo) rec.startKey = rec.test.reactsTo;
@@ -574,7 +604,7 @@ async function runHunt(opts = {}) {
         else {
             const p = opts.retry ? { genres: [], keywords: [], reason: 'retry run' } : await plan(ai, opts.request);
             if (!opts.retry) log(`Plan: ${p.genres.join(' · ') || 'any genre'}${p.keywords.length ? ' · words: ' + p.keywords.join(', ') : ''} — ${p.reason || ''}`);
-            const total = Math.max(1, Math.min(50, opts.count || settings.batch));
+            const total = Math.max(1, Math.min(200, opts.count || settings.batch));
             const retries = pickRetries(opts.retry ? total : Math.round(total * settings.retryShare), !!opts.retry);
             if (retries.length) log(`Searching again ${retries.length} game(s) that had no copy${opts.retry ? '' : ' (new sources / retry time reached)'}`);
             else if (opts.retry) log('No game is missing a copy right now');
@@ -604,7 +634,9 @@ setInterval(() => {
 }, 60e3).unref();
 
 // ---------- HTTP API ----------
-const light = (r) => ({ id: r.id, title: r.title, year: r.year, genre: r.genre, machine: r.machine, testedMachine: r.testedMachine || null, publishers: (r.publishers || []).slice(0, 2), status: r.status, copyright: r.copyright, score: r.score, votes: r.votes, hasCover: (r.images || []).some((i) => i.name === 'cover' || i.name === 'load'), images: (r.images || []).map((i) => i.name), players: r.players });
+const FAVF = path.join(DATA, 'favorites.json');
+const favs = readJSON(FAVF, {});
+const light = (r) => ({ id: r.id, title: r.title, year: r.year, genre: r.genre, machine: r.machine, testedMachine: r.testedMachine || null, publishers: (r.publishers || []).slice(0, 2), status: r.status, copyright: r.copyright, score: r.score, votes: r.votes, hasCover: (r.images || []).some((i) => i.name === 'cover' || i.name === 'load'), images: (r.images || []).map((i) => i.name), players: r.players, fav: !!favs[r.id] });
 const send = (res, code, obj) => { const b = JSON.stringify(obj); res.writeHead(code, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) }); res.end(b); };
 const body = (req) => new Promise((ok) => { let s = ''; req.on('data', (c) => { s += c; if (s.length > 1e5) req.destroy(); }); req.on('end', () => { try { ok(JSON.parse(s || '{}')); } catch (e) { ok({}); } }); });
 const CT = { png: 'image/png', gif: 'image/gif', jpg: 'image/jpeg' };
@@ -633,6 +665,7 @@ const server = http.createServer(async (req, res) => {
             const q = (u.searchParams.get('q') || '').toLowerCase(), filter = u.searchParams.get('filter') || 'all', genre = u.searchParams.get('genre') || '', mach = u.searchParams.get('machine') || '';
             let list = Object.values(catalog.games).filter((r) => r.status !== 'working');
             if (filter === 'ready') list = list.filter((r) => r.status === 'ready');
+            else if (filter === 'fav') list = list.filter((r) => favs[r.id]);
             else if (filter === 'copyright') list = list.filter((r) => r.copyright);
             else if (filter === 'failed') list = list.filter((r) => r.status === 'failed');
             else list = list.filter((r) => r.status !== 'failed');
@@ -656,7 +689,7 @@ const server = http.createServer(async (req, res) => {
         }
         if (p[0] === 'game' && p[1] && req.method === 'GET' && p.length === 2) {
             const r = catalog.games[p[1]]; if (!r) return send(res, 404, { ok: false, error: 'not found' });
-            return send(res, 200, { ok: true, game: r });
+            return send(res, 200, { ok: true, game: Object.assign({}, r, { fav: !!favs[r.id] }) });
         }
         if (p[0] === 'file' && p[1] && req.method === 'GET') {
             const r = catalog.games[p[1]];
@@ -666,6 +699,12 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': buf.length, 'X-Spectrom-Name': 'game.' + r.file.ext, 'X-Spectrom-Machine': String(r.testedMachine || 48) });
             return res.end(buf);
         }
+        if (p[0] === 'text' && p[1] && req.method === 'GET') {   // original instructions (text) of a playable game
+            const r = catalog.games[p[1]];
+            if (!r || r.status !== 'ready' || r.copyright || !r.hasText) return send(res, 404, { ok: false, error: 'no instructions' });
+            let t = ''; try { t = fs.readFileSync(path.join(DATA, 'games', String(r.id), 'instructions.txt'), 'utf8'); } catch (e) { return send(res, 404, { ok: false, error: 'no instructions' }); }
+            return send(res, 200, { ok: true, title: r.title, text: t });
+        }
         if (p[0] === 'img' && p[1] && p[2] && req.method === 'GET') {
             const r = catalog.games[p[1]]; const im = r && (r.images || []).find((i) => i.name === p[2]);
             if (!im) return send(res, 404, { ok: false, error: 'no image' });
@@ -673,17 +712,24 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': CT[im.ext] || 'application/octet-stream', 'Content-Length': buf.length, 'Cache-Control': 'private, max-age=86400' });
             return res.end(buf);
         }
+        if (p[0] === 'fav' && p[1] && req.method === 'POST') {   // ♥ favourites
+            const b = await body(req); const id = String(Number(p[1]));
+            if (!catalog.games[id]) return send(res, 404, { ok: false, error: 'not in the library' });
+            if (b.on === false) delete favs[id]; else favs[id] = now();
+            writeJSON(FAVF, favs);
+            return send(res, 200, { ok: true, fav: !!favs[id], count: Object.keys(favs).length });
+        }
         if (req.method === 'POST') {
             const b = await body(req);
             if (u.pathname === '/hunt') {
                 if (job.running) return send(res, 409, { ok: false, error: 'a hunt is already running' });
                 if (diskFreeGB() < 3) return send(res, 409, { ok: false, error: 'less than 3 GB free on disk' });
-                runHunt({ count: Number(b.count) || settings.batch, request: b.request ? String(b.request).slice(0, 200) : '', ids: Array.isArray(b.ids) ? b.ids.slice(0, 20) : null, by: b.by });
+                runHunt({ count: Number(b.count) || settings.batch, request: b.request ? String(b.request).slice(0, 200) : '', ids: Array.isArray(b.ids) ? b.ids.slice(0, 100) : null, by: b.by });
                 return send(res, 202, { ok: true, started: true });
             }
             if (u.pathname === '/retry') {
                 if (job.running) return send(res, 409, { ok: false, error: 'a hunt is already running' });
-                runHunt({ retry: true, count: Math.max(1, Math.min(50, Number(b.count) || 20)), by: b.by });
+                runHunt({ retry: true, count: Math.max(1, Math.min(200, Number(b.count) || 20)), by: b.by });
                 return send(res, 202, { ok: true, started: true });
             }
             if (u.pathname === '/sources') {
@@ -702,7 +748,7 @@ const server = http.createServer(async (req, res) => {
             if (u.pathname === '/settings') {
                 if ('autoHunt' in b) settings.autoHunt = !!b.autoHunt;
                 if (b.everyHours) settings.everyHours = Math.max(1, Math.min(168, Number(b.everyHours)));
-                if (b.batch) settings.batch = Math.max(1, Math.min(50, Number(b.batch)));
+                if (b.batch) settings.batch = Math.max(1, Math.min(200, Number(b.batch)));
                 if ('copyrightShare' in b) settings.copyrightShare = Math.max(0, Math.min(1, Number(b.copyrightShare)));
                 if ('retryShare' in b) settings.retryShare = Math.max(0, Math.min(1, Number(b.retryShare)));
                 saveSettings(); return send(res, 200, { ok: true, settings });
@@ -713,6 +759,7 @@ const server = http.createServer(async (req, res) => {
                 return send(res, 202, { ok: true });
             }
             if (p[0] === 'game' && p[1] && p[2] === 'delete') {
+                if (favs[p[1]]) { delete favs[p[1]]; writeJSON(FAVF, favs); }
                 const r = catalog.games[p[1]]; if (!r) return send(res, 404, { ok: false, error: 'not found' });
                 fs.rmSync(path.join(DATA, 'games', String(r.id)), { recursive: true, force: true });
                 delete catalog.games[p[1]]; saveCatalog(); log(`Removed ${r.title} from the catalog`);
@@ -725,6 +772,43 @@ const server = http.createServer(async (req, res) => {
         if (!res.headersSent) send(res, 500, { ok: false, error: e.message });
     }
 });
+
+// ---------- gallery backfill: games added before the gallery get their extra pictures, one game every 20 s while the agent rests ----------
+let galleryBusy = false, galleryIndexAsked = false;
+async function galleryTick() {
+    if (galleryBusy || job.running) return;
+    if (index && index.version !== INDEX_VERSION) {   // the old index has no gallery data: rebuild it once (from the dump on disk when it is recent)
+        if (galleryIndexAsked) return;
+        galleryIndexAsked = true; galleryBusy = true;
+        job.running = 'index';
+        try { await ensureIndex(); } catch (e) { log('Gallery: ZXDB index rebuild failed: ' + e.message, 'warn'); } finally { galleryBusy = false; job.running = null; setPhase('idle'); }
+        return;
+    }
+    if (!indexById || diskFreeGB() < 3) return;
+    const r = Object.values(catalog.games).find((x) => x.status === 'ready' && !x.copyright && (x.gallery || 0) < GALLERY_V);
+    if (!r) return;
+    const g = indexById.get(Number(r.id));
+    if (!g || g.a !== 'A') { r.gallery = GALLERY_V; saveCatalog(); return; }
+    galleryBusy = true;
+    try {
+        const dir = path.join(DATA, 'games', String(r.id)); fs.mkdirSync(dir, { recursive: true });
+        const have = new Set((r.images || []).map((i) => i.name));
+        const gal = await fetchImages(g, dir, have);
+        let hasText = !!r.hasText;
+        if (!hasText) {
+            const l = (g.ins || []).find((x) => /\.txt$/i.test(x) && hasSource(x));
+            if (l) { try { const t = (await fetchFromSources(l, 300e3, { quiet: true })).buf.toString('latin1'); if (t.trim().length > 20) { fs.writeFileSync(path.join(dir, 'instructions.txt'), t.slice(0, 60000)); hasText = true; } } catch (e) { /* no text */ } }
+        }
+        const cur = catalog.games[r.id];
+        if (cur && cur.status === 'ready') {
+            cur.images = (cur.images || []).concat(gal.images.filter((i) => !have.has(i.name)));
+            cur.docs = gal.docs; cur.hasText = hasText; cur.gallery = GALLERY_V; saveCatalog();
+            if (gal.images.length || gal.docs.length) log(`Gallery: ${cur.title} +${gal.images.length} picture(s)${gal.docs.length ? ', ' + gal.docs.length + ' document(s)' : ''}`);
+        }
+    } catch (e) { r.gallery = GALLERY_V; saveCatalog(); log(`Gallery ${r.title}: ${e.message}`, 'warn'); }
+    finally { galleryBusy = false; }
+}
+setInterval(() => { galleryTick().catch(() => {}); }, 20000).unref();
 
 // games left half-done by a restart go back to the queue
 for (const r of Object.values(catalog.games)) if (r.status === 'working') delete catalog.games[r.id];

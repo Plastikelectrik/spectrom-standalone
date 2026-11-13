@@ -82,7 +82,7 @@ app.get('/api/live', safe(async (req, res) => pass(await svc('/live?' + qs(req, 
 app.get('/api/sources', safe(async (req, res) => pass(await svc('/sources'), res)));
 app.post('/api/sources', safe(async (req, res) => { const b = req.body || {}; pass(await svc('/sources', { method: 'POST', body: { id: String(b.id || '').slice(0, 40), enabled: !!b.enabled } }), res); }));
 app.post('/api/sources/check', safe(async (req, res) => pass(await svc('/sources/check', { method: 'POST', body: {} }), res)));
-app.post('/api/retry', safe(async (req, res) => pass(await svc('/retry', { method: 'POST', body: { count: Math.max(1, Math.min(50, Number((req.body || {}).count) || 20)), by: 'you' } }), res)));
+app.post('/api/retry', safe(async (req, res) => pass(await svc('/retry', { method: 'POST', body: { count: Math.max(1, Math.min(200, Number((req.body || {}).count) || 20)), by: 'you' } }), res)));
 app.get('/api/log', safe(async (req, res) => pass(await svc('/log?' + qs(req, ['since'])), res)));
 app.get('/api/search', safe(async (req, res) => pass(await svc('/search?' + qs(req, ['q'])), res)));
 app.get('/api/catalog', safe(async (req, res) => {
@@ -107,6 +107,14 @@ app.get('/api/rom/:id', safe(async (req, res) => {   // only games whose distrib
     res.set({ 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store', 'X-Spectrom-Name': r.headers.get('x-spectrom-name') || 'game.tap', 'X-Spectrom-Machine': r.headers.get('x-spectrom-machine') || '48' });
     res.send(Buffer.from(await r.arrayBuffer()));
 }));
+app.get('/api/text/:id', safe(async (req, res) => {   // original instructions (text) of a playable game
+    if (!ID.test(req.params.id)) return res.status(400).json({ ok: false, error: 'bad id' });
+    pass(await svc('/text/' + req.params.id), res);
+}));
+app.post('/api/fav/:id', safe(async (req, res) => {   // favourites
+    if (!ID.test(req.params.id)) return res.status(400).json({ ok: false, error: 'bad id' });
+    pass(await svc('/fav/' + req.params.id, { method: 'POST', body: { on: (req.body || {}).on !== false } }), res);
+}));
 app.get('/api/pic/:id/:name', safe(async (req, res) => {
     const { id, name } = req.params;
     if (!ID.test(id) || !/^[a-z0-9]{1,12}$/.test(name)) return res.status(400).end();
@@ -117,8 +125,8 @@ app.get('/api/pic/:id/:name', safe(async (req, res) => {
 }));
 app.post('/api/hunt', safe(async (req, res) => {
     const b = req.body || {};
-    const body = { count: Math.max(1, Math.min(50, Number(b.count) || 10)), request: String(b.request || '').slice(0, 200), by: 'you' };
-    if (Array.isArray(b.ids)) body.ids = b.ids.filter((x) => ID.test(String(x))).slice(0, 20).map(Number);
+    const body = { count: Math.max(1, Math.min(200, Number(b.count) || 10)), request: String(b.request || '').slice(0, 200), by: 'you' };
+    if (Array.isArray(b.ids)) body.ids = b.ids.filter((x) => ID.test(String(x))).slice(0, 100).map(Number);
     pass(await svc('/hunt', { method: 'POST', body }), res);
 }));
 app.post('/api/stop', safe(async (req, res) => pass(await svc('/stop', { method: 'POST', body: {} }), res)));

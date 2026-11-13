@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 — 2026-11-13
+
+- **Favourites**: a heart on every game card and an ADD TO FAVOURITES button in every sheet; new **♥ FAVOURITES** tab with
+  the library filters. Stored in `data/favorites.json`.
+- **Full gallery** in every game sheet: every picture ZXDB lists (17 kinds: loading/in-game/opening screens, inlays front, back
+  and side, media scans, scanned instructions, booklets, maps, original artwork, adverts, posters, promotional material,
+  keyboard overlays, code sheets) fetched from every source, grouped, with a full-screen viewer (zoom, arrows, new tab),
+  links to the PDF documents and the original instructions text.
+- ZXDB index v3 (rebuilt once from the dump on disk). Games added before 1.1.0 get their gallery in the background.
+- Bigger limits: up to 200 games per hunt, per retry run and per automatic hunt, 100 titles per request.
+
 ## 1.0.2 — 2026-11-10
 
 - Complete instructions in the README (English and Spanish): step-by-step installation for Windows, macOS and Linux,

@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Plastikelectrik — GNU GPL v3 or later (see LICENSE).
 (function () {
     'use strict';
-    const VERSION = '1.0.2';
+    const VERSION = '1.1.0';
     const API = (window.SPECTROM_API || (location.origin + '/api'));
     const VENDOR = (window.SPECTROM_VENDOR || '/jsspeccy/');
     const $ = (s, r) => (r || document).querySelector(s);
@@ -304,6 +304,31 @@
 .zx-chip.btn{cursor:pointer}.zx-chip.btn:hover{border-color:#ffff00;color:#ffff00}
 .zx-footer{margin-top:22px;font-size:10.5px;color:#55555f;line-height:1.6;position:relative;z-index:1}
 .zx-footer a{color:#77778a}
+.zx-heart{position:absolute;top:6px;right:6px;z-index:3;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.72);border:1px solid #555;color:#ddd;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:transform .12s,color .12s,border-color .12s}
+.zx-heart svg{fill:none;stroke:currentColor;stroke-width:2}
+.zx-heart:hover{color:#ff8fab;border-color:#ff8fab;transform:scale(1.08)}
+.zx-heart.on{color:#ff3b6b;border-color:#ff3b6b}.zx-heart.on svg{fill:currentColor}
+.zx-heart.big{position:static;width:auto;height:auto;border-radius:0;padding:10px 14px;gap:8px;font:600 12px "IBM Plex Mono",monospace;letter-spacing:.06em;background:#111}
+.zx-heart.pop svg{animation:zxpop .35s}
+@keyframes zxpop{50%{transform:scale(1.55)}}
+.zx-favhead{display:flex;align-items:center;gap:10px;color:#ffb3c4;font-size:12px;margin-bottom:10px;position:relative;z-index:1}.zx-favhead svg{fill:#ff3b6b;stroke:#ff3b6b}
+.zx-gal-open{display:block;position:relative;padding:0;border:0;background:none;cursor:zoom-in;width:100%}
+.zx-gal-zoom{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.75);color:#fff;padding:2px 8px;font-size:16px;border:1px solid #555}
+.zx-gal-group{margin-top:10px}.zx-gal-gh{font-size:10px;color:#00d7d7;letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px}.zx-gal-gh small{color:#888;margin-left:4px}
+.zx-gal-strip .zx-gal-th{padding:0;border:2px solid transparent;background:#000;cursor:pointer;width:86px;height:64px}
+.zx-gal-strip .zx-gal-th img{width:100%;height:100%;object-fit:cover;display:block;border:0}
+.zx-gal-strip .zx-gal-th.on{border-color:#ffff00}
+.zx-gal-doc{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;width:86px;height:64px;border:1px solid #444;color:#ddd;text-decoration:none;font-size:9px;line-height:1.2;text-align:center;padding:4px;box-sizing:border-box;background:#0b0b0b}
+.zx-gal-doc b{color:#ff6b6b;font-size:13px}.zx-gal-doc:hover{border-color:#ffff00}
+.zx-lb{position:fixed;inset:0;z-index:99996;background:rgba(0,0,0,.95);display:flex;flex-direction:column}
+.zx-lb-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;color:#ddd;font:12px "IBM Plex Mono",monospace;letter-spacing:.08em;border-bottom:1px solid #333}
+.zx-lb-bar button,.zx-lb-bar a{background:#111;border:1px solid #444;color:#fff;margin-left:6px;padding:5px 10px;cursor:pointer;text-decoration:none;font-size:14px}
+.zx-lb-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;min-height:0;padding:10px}
+.zx-lb-stage img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
+.zx-lb-stage.zoom{display:block;text-align:center}.zx-lb-stage.zoom img{max-width:none;max-height:none;cursor:zoom-out}
+.zx-lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);border:1px solid #555;color:#fff;font-size:38px;width:52px;height:72px;cursor:pointer}
+.zx-lb-nav.prev{left:10px}.zx-lb-nav.next{right:10px}
+.zx-lb-text{flex:1;overflow:auto;margin:0;padding:18px 22px;color:#e8e8e8;font:13px/1.6 "IBM Plex Mono",monospace;white-space:pre-wrap}
 .zx-inl{vertical-align:-1px;display:inline;height:.8em!important;width:auto}`;
 
     function toast(msg, err) {
@@ -772,6 +797,95 @@
         }
     }
 
+    const GT = (s, ...a) => a.reduce((t, v, i) => t.split('{' + i + '}').join(v), s);   // texts (English in the standalone app)
+    // ---------------- gallery of a game sheet (every picture ZXDB lists) + lightbox, and the favourite heart ----------------
+    const GAL_CAPTION = {
+        cover: 'Title screen (agent test)', shot: 'In-game (agent test)', load: 'Loading screen', run: 'In-game', open: 'Opening screen',
+        inlay: 'Inlay — front', inlayb: 'Inlay — back', inlays: 'Inlay — side', media: 'Media scan', scan: 'Scanned instructions', booklet: 'Booklet',
+        overlay: 'Keyboard overlay', codes: 'Code sheet', map: 'Game map', art: 'Original artwork', advert: 'Advertisement', poster: 'Poster', promo: 'Promotional material', insdoc: 'Instructions',
+    };
+    const GAL_GROUPS = [['Screens', ['cover', 'shot', 'load', 'run', 'open']], ['Box and media', ['inlay', 'inlayb', 'inlays', 'media']],
+        ['Instructions', ['scan', 'booklet', 'overlay', 'codes', 'insdoc']], ['Maps', ['map']], ['Artwork and adverts', ['art', 'advert', 'poster', 'promo']]];
+    const galKind = (name) => String(name).replace(/\d+$/, '');
+    const galCaption = (name) => GT(GAL_CAPTION[galKind(name)] || name);
+    const HEART = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.6 2 4.5 5.9 4.1 8.3 3.8 10.3 5 12 7c1.7-2 3.7-3.2 6.1-2.9C22 4.5 23.6 8.6 22 11.7 19.5 16.4 12 21 12 21z"/></svg>';
+    const heartBtn = (id, on, big) => `<button type="button" class="zx-heart ${on ? 'on' : ''} ${big ? 'big' : ''}" data-fav="${id}" aria-pressed="${on ? 'true' : 'false'}" title="${esc(on ? GT('Remove from my favourites') : GT('Add to my favourites'))}" aria-label="${esc(on ? GT('Remove from my favourites') : GT('Add to my favourites'))}">${HEART}${big ? ' <span>' + esc(on ? GT('IN MY FAVOURITES') : GT('ADD TO FAVOURITES')) + '</span>' : ''}</button>`;
+    function setHeart(btn, on) {
+        btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        const t = on ? GT('Remove from my favourites') : GT('Add to my favourites'); btn.title = t; btn.setAttribute('aria-label', t);
+        const s = btn.querySelector('span'); if (s) s.textContent = on ? GT('IN MY FAVOURITES') : GT('ADD TO FAVOURITES');
+    }
+    // the sheet's picture area: main picture (opens the lightbox), then every picture grouped, then the documents
+    function galleryHtml(imgs, docs, hasText) {
+        if (!imgs.length && !(docs || []).length && !hasText) return `<div class="zx-thumb none" style="aspect-ratio:4/3">${esc(GT('NO SCREEN'))}</div>`;
+        const idx = new Map(imgs.map((i, n) => [i.name, n]));
+        const groups = GAL_GROUPS.map(([label, kinds]) => [label, imgs.filter((i) => kinds.includes(galKind(i.name))), (docs || []).filter((d) => kinds.includes(galKind(d.name)))]);
+        const other = imgs.filter((i) => !GAL_GROUPS.some(([, k]) => k.includes(galKind(i.name))));
+        if (other.length) groups.push(['More', other, []]);
+        return `${imgs.length ? `<button type="button" class="zx-gal-open" data-lb="0" title="${esc(GT('See it big'))}"><img class="zx-gal-main" src="${esc(imgs[0].url)}" alt="${esc(galCaption(imgs[0].name))}"><span class="zx-gal-zoom" aria-hidden="true">⤢</span></button>
+            <div class="zx-gal-cap" data-cap>${esc(galCaption(imgs[0].name))} · 1/${imgs.length}</div>` : ''}
+            ${groups.filter(([, li, dl]) => li.length || dl.length || false).map(([label, li, dl]) => `<div class="zx-gal-group"><div class="zx-gal-gh">${esc(GT(label))} <small>${li.length + dl.length}</small></div>
+                <div class="zx-gal-strip">${li.map((i) => `<button type="button" class="zx-gal-th ${idx.get(i.name) ? '' : 'on'}" data-i="${idx.get(i.name)}" title="${esc(galCaption(i.name))}"><img loading="lazy" src="${esc(i.url)}" alt="${esc(galCaption(i.name))}"></button>`).join('')}
+                ${dl.map((d) => `<a class="zx-gal-doc" href="${esc(d.url)}" target="_blank" rel="noopener" title="${esc(GT('Opens the original file on its archive'))}"><b>PDF</b><span>${esc(galCaption(d.name))}</span></a>`).join('')}</div></div>`).join('')}
+            ${hasText ? `<button type="button" class="zx-btn" data-insttext style="margin-top:10px"><i class="fas fa-file-lines"></i> ${esc(GT('Read the original instructions'))}</button>` : ''}`;
+    }
+    // full-screen viewer: ← → to move, click or + to zoom to the real size, Esc to close
+    function openLightbox(imgs, start) {
+        let i = start || 0, zoom = false;
+        const lb = document.createElement('div'); lb.className = 'zx-lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true');
+        const draw = () => {
+            const im = imgs[i];
+            lb.innerHTML = `<div class="zx-lb-bar"><span>${esc(galCaption(im.name))} · ${i + 1}/${imgs.length}</span>
+                <span><button type="button" data-lz title="${esc(GT('Zoom'))}">${zoom ? '⤡' : '⤢'}</button><a href="${esc(im.url)}" target="_blank" rel="noopener" title="${esc(GT('Open in a new tab'))}">↗</a><button type="button" data-lx aria-label="${esc(GT('Close'))}">✕</button></span></div>
+                <div class="zx-lb-stage ${zoom ? 'zoom' : ''}" data-ls><img src="${esc(im.url)}" alt="${esc(galCaption(im.name))}"></div>
+                ${imgs.length > 1 ? `<button type="button" class="zx-lb-nav prev" data-lp aria-label="${esc(GT('Previous'))}">‹</button><button type="button" class="zx-lb-nav next" data-ln aria-label="${esc(GT('Next'))}">›</button>` : ''}`;
+        };
+        const go = (d) => { i = (i + d + imgs.length) % imgs.length; zoom = false; draw(); };
+        const close = () => { lb.remove(); document.removeEventListener('keydown', key, true); };
+        const key = (ev) => {
+            if (ev.key === 'Escape') { ev.stopPropagation(); close(); } else if (ev.key === 'ArrowRight') go(1); else if (ev.key === 'ArrowLeft') go(-1);
+            else if (ev.key === '+' || ev.key === '-') { zoom = !zoom; draw(); }
+        };
+        lb.addEventListener('click', (ev) => {
+            if (ev.target.closest('[data-lx]') || ev.target === lb) return close();
+            if (ev.target.closest('[data-lp]')) return go(-1);
+            if (ev.target.closest('[data-ln]')) return go(1);
+            if (ev.target.closest('[data-lz]') || ev.target.closest('[data-ls] img')) { zoom = !zoom; draw(); }
+        });
+        document.addEventListener('keydown', key, true);
+        draw(); document.body.appendChild(lb);
+        const b = lb.querySelector('[data-lx]'); if (b) b.focus();
+    }
+    function openTextViewer(title, text) {
+        const lb = document.createElement('div'); lb.className = 'zx-lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true');
+        lb.innerHTML = `<div class="zx-lb-bar"><span>${esc(GT('Original instructions'))} — ${esc(title)}</span><span><button type="button" data-lx aria-label="${esc(GT('Close'))}">✕</button></span></div>
+            <pre class="zx-lb-text"></pre>`;
+        lb.querySelector('pre').textContent = text;
+        const close = () => { lb.remove(); document.removeEventListener('keydown', key, true); };
+        const key = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
+        lb.addEventListener('click', (ev) => { if (ev.target.closest('[data-lx]') || ev.target === lb) close(); });
+        document.addEventListener('keydown', key, true);
+        document.body.appendChild(lb);
+    }
+    // wires a sheet: thumbnails, lightbox, instructions text
+    function wireGallery(m, imgs, gameId, title) {
+        m.addEventListener('click', async (ev) => {
+            const th = ev.target.closest('[data-i]');
+            if (th) {
+                const n = Number(th.dataset.i), im = imgs[n]; const main = $('.zx-gal-main', m);
+                if (main) { main.src = im.url; main.alt = galCaption(im.name); main.closest('[data-lb]').dataset.lb = String(n); }
+                const cap = $('[data-cap]', m); if (cap) cap.textContent = galCaption(im.name) + ' · ' + (n + 1) + '/' + imgs.length;
+                $$('.zx-gal-th', m).forEach((x) => x.classList.toggle('on', x === th));
+                return;
+            }
+            const lbb = ev.target.closest('[data-lb]'); if (lbb) return openLightbox(imgs, Number(lbb.dataset.lb) || 0);
+            if (ev.target.closest('[data-insttext]')) {
+                const d = await api('/text/' + gameId).catch(() => null);
+                if (d && d.ok) openTextViewer(title, d.text); else toast(GT('The instructions could not be read'), true);
+            }
+        });
+    }
+
     // ---------------- App ----------------
     class App {
         constructor(root) { this.root = root; this.tab = 'library'; this.f = { q: '', genre: '', machine: '', filter: 'all', sort: 'recent' }; this.list = []; this.total = 0; this.logSince = 0; this.status = null; }
@@ -780,7 +894,7 @@
             this.root.innerHTML = `<div class="zx-rainbow"><i style="background:${ZX.red}"></i><i style="background:${ZX.yellow}"></i><i style="background:${ZX.green}"></i><i style="background:${ZX.cyan}"></i></div>
             <div class="zx-head"><div class="zx-logo">${romImg('SPECTROM', 6, '#ffffff')}<div class="zx-sub">ZX Spectrum 48K · 128K suite · AI curated</div></div>
             <div class="zx-chips" data-chips><span class="zx-chip">Connecting…</span></div></div>
-            <div class="zx-tabs">${[['library', 'LIBRARY'], ['agent', 'AI AGENT'], ['load', 'LOAD TAPE']].map(([k, l]) => `<button class="zx-tab ${k === this.tab ? 'on' : ''}" data-tab-x="${k}">${l}</button>`).join('')}</div>
+            <div class="zx-tabs">${[['library', 'LIBRARY'], ['favs', '♥ FAVOURITES'], ['agent', 'AI AGENT'], ['load', 'LOAD TAPE']].map(([k, l]) => `<button class="zx-tab ${k === this.tab ? 'on' : ''}" data-tab-x="${k}">${l}</button>`).join('')}</div>
             <div data-view></div>
             <div class="zx-footer">Emulator core: <a href="https://github.com/gasman/jsspeccy3" target="_blank" rel="noopener">JSSpeccy 3</a> by Matt Westcott (GPL-3.0, source and licence in /jsspeccy/). Game data: <a href="https://github.com/zxdb/ZXDB" target="_blank" rel="noopener">ZXDB</a>. Spectrum ROMs © Amstrad, distributed with permission for use in emulators. ${romImg('SPECTROM', 2, '#55555f', null, 'zx-inl')} only downloads and plays games whose rights holders allow distribution; titles marked © are listed only. <a href="https://github.com/Plastikelectrik/spectrom-standalone" target="_blank" rel="noopener">${romImg('SPECTROM', 2, '#77778a', null, 'zx-inl')} standalone</a> · GPL-3.0</div>`;
             this.root.addEventListener('click', (ev) => {
@@ -812,23 +926,27 @@
             this.tab = tab;
             $$('.zx-tab', this.root).forEach((b) => b.classList.toggle('on', b.dataset.tabX === tab));
             const old = $('[data-view]', this.root); const v = old.cloneNode(false); old.replaceWith(v);   // fresh node: no stacked listeners
-            if (tab === 'library') this.renderLibrary(v);
+            if (tab === 'library') this.renderLibrary(v, false);
+            else if (tab === 'favs') this.renderLibrary(v, true);
             else if (tab === 'agent') this.renderAgent(v);
             else this.renderLoad(v);
         }
         // ----- library -----
-        renderLibrary(v) {
-            v.innerHTML = `<div class="zx-filters">
+        renderLibrary(v, favMode) {
+            this.favMode = !!favMode;
+            v.innerHTML = `${favMode ? `<div class="zx-favhead">${HEART} ${esc('Your favourite games: press the heart on any card or game sheet to add or remove it.')}</div>` : ''}<div class="zx-filters">
                 <input class="zx-in" data-f="q" placeholder="Search title, publisher, author…" value="${esc(this.f.q)}">
                 <select class="zx-sel" data-f="genre"><option value="">All genres</option></select>
                 <select class="zx-sel" data-f="machine"><option value="">48K + 128K</option><option value="48">48K</option><option value="128">128K</option></select>
-                <select class="zx-sel" data-f="filter"><option value="all">Playable + ©</option><option value="ready">Playable only</option><option value="copyright">© listed only</option><option value="failed">Failed tests</option></select>
+                <select class="zx-sel" data-f="filter" ${favMode ? 'hidden' : ''}><option value="all">Playable + ©</option><option value="ready">Playable only</option><option value="copyright">© listed only</option><option value="failed">Failed tests</option></select>
                 <select class="zx-sel" data-f="sort"><option value="recent">Recently added</option><option value="top">Most popular</option><option value="title">A–Z</option><option value="year">Year</option></select>
             </div><div class="zx-grid" data-grid></div><div class="zx-more" data-more></div>`;
             ['machine', 'filter', 'sort'].forEach((k) => { $(`[data-f="${k}"]`, v).value = this.f[k]; });
             let t = null;
             v.addEventListener('input', (ev) => { const k = ev.target.dataset.f; if (!k) return; this.f[k] = ev.target.value; clearTimeout(t); t = setTimeout(() => this.loadList(true), k === 'q' ? 300 : 0); });
             v.addEventListener('click', (ev) => {
+                const h = ev.target.closest('[data-fav]');
+                if (h) { ev.stopPropagation(); return this.toggleFav(Number(h.dataset.fav), !h.classList.contains('on'), h); }
                 const c = ev.target.closest('[data-game]'); if (c) return this.openSheet(Number(c.dataset.game));
                 if (ev.target.closest('[data-moreb]')) this.loadList(false);
                 if (ev.target.closest('[data-goagent]')) this.show('agent');
@@ -838,13 +956,15 @@
         async loadList(reset) {
             const v = $('[data-view]', this.root); const grid = $('[data-grid]', v); if (!grid) return;
             if (reset) { this.list = []; }
-            const p = new URLSearchParams(Object.assign({}, this.f, { offset: this.list.length, limit: 60 }));
+            const p = new URLSearchParams(Object.assign({}, this.f, { offset: this.list.length, limit: 60 }, this.favMode ? { filter: 'fav' } : {}));
             const d = await api('/catalog?' + p.toString());
             if (!d.ok) { grid.innerHTML = `<div class="zx-empty">${esc(d.error || 'Cannot read the catalog')}</div>`; return; }
             this.list = this.list.concat(d.games); this.total = d.total;
             const gs = $('[data-f="genre"]', v);
             if (gs && gs.options.length <= 1) { d.genres.forEach((gn) => { const o = document.createElement('option'); o.value = gn; o.textContent = gn; gs.appendChild(o); }); gs.value = this.f.genre; }
-            if (!this.list.length) {
+            if (!this.list.length && this.favMode) {
+                grid.innerHTML = `<div class="zx-empty" style="grid-column:1/-1">${romImg('NO FAVOURITES YET', 2, '#ff3b6b')}<br>${this.f.q || this.f.genre || this.f.machine ? 'None of your favourites matches this filter.' : 'Press the heart on any game card or sheet and it will be kept here.'}</div>`;
+            } else if (!this.list.length) {
                 grid.innerHTML = `<div class="zx-empty" style="grid-column:1/-1">${romImg('NO GAMES YET', 2, '#ffff00')}<br>The catalog is empty for this filter.<br><button class="zx-btn go" data-goagent><i class="fas fa-robot"></i> Send the AI agent hunting</button></div>`;
             } else grid.innerHTML = this.list.map((g) => this.card(g)).join('');
             $('[data-more]', v).innerHTML = this.list.length < this.total ? `<button class="zx-btn" data-moreb>LOAD MORE (${this.total - this.list.length})</button>` : '';
@@ -854,9 +974,17 @@
             const swap = g.thumb2 ? `<img class="zx-thumb zx-swap" loading="lazy" src="${esc(g.thumb2)}" alt="">` : '';
             const badges = [machineBadge(g), g.copyright ? '<span class="zx-badge copy">© LISTED</span>' : '', g.status === 'ready' ? '<span class="zx-badge ok">✓ TESTED</span>' : '',
                 g.status === 'listed' ? '<span class="zx-badge ok">✓ TESTED</span>' : '', g.status === 'failed' ? '<span class="zx-badge warn">FAILED</span>' : '', g.status === 'listed-nocopy' ? '<span class="zx-badge warn">NO COPY</span>' : ''].join('');
-            return `<div class="zx-card" data-game="${g.id}"><div class="zx-badges">${badges}</div>${thumb}${swap}
+            return `<div class="zx-card" data-game="${g.id}"><div class="zx-badges">${badges}</div>${heartBtn(g.id, g.fav)}${thumb}${swap}
                 <div class="zx-cbody"><div class="zx-ctitle">${esc(g.title)}</div><div class="zx-cmeta">${esc([g.year, (g.publishers || [])[0]].filter(Boolean).join(' · '))}</div>
                 <div class="zx-cmeta">${esc((g.genre || '').replace(/^.*?: /, ''))}${g.votes ? ' · ★ ' + Number(g.score).toFixed(1) : ''}</div></div></div>`;
+        }
+        async toggleFav(id, on, btn) {   // ♥: every heart of this game on the page follows
+            const r = await api('/fav/' + id, { method: 'POST', body: { on } });
+            if (!r.ok) return toast(r.error || 'Could not change the favourite', true);
+            $$('[data-fav="' + id + '"]').forEach((b) => { setHeart(b, r.fav); b.classList.remove('pop'); void b.offsetWidth; if (r.fav) b.classList.add('pop'); });
+            const g = (this.list || []).find((x) => Number(x.id) === Number(id)); if (g) g.fav = r.fav;
+            if (r.fav) SFX.ok();
+            if (!r.fav && this.favMode) { const c = $('[data-grid] [data-game="' + id + '"]', this.root); if (c) c.remove(); this.total = Math.max(0, (this.total || 1) - 1); if (!$('[data-grid] [data-game]', this.root)) this.loadList(true); }
         }
         // ----- game sheet -----
         async openSheet(id) {
@@ -864,7 +992,6 @@
             if (!d.ok) return toast(d.error || 'Cannot open the game', true);
             const g = d.game;
             const imgs = g.images || [];
-            const capt = { cover: 'Title screen (agent test)', shot: 'In-game (agent test)', load: 'Loading screen', run1: 'In-game', run2: 'In-game', open: 'Opening screen', inlay: 'Cassette inlay' };
             const m = document.createElement('div'); m.className = 'zx-modal';
             const playable = g.status === 'ready' && !g.copyright;
             const facts = [['Year', g.year], ['Publisher', (g.publishers || []).join(', ')], ['Authors', (g.authors || []).join(', ')], ['Genre', g.genre], ['Machine', g.machine + (g.testedMachine ? ' · tested on ' + g.testedMachine + 'K' : '')],
@@ -873,8 +1000,7 @@
             const keys = (g.keys || []).length ? `<table class="zx-keys">${g.keys.map((k) => `<tr><td style="width:90px"><span class="zx-key">${esc(k.key)}</span></td><td>${esc(k.action)}</td></tr>`).join('')}</table>` : '<p style="color:#999;font-size:12px">The original instructions have no key list the agent could read. Most games use Q A O P + SPACE or a joystick (arrows + Ctrl in ' + romImg('SPECTROM', 2, '#999999', null, 'zx-inl') + ').</p>';
             m.innerHTML = `<div class="zx-sheet"><div class="zx-sheet-top">${romImg(String(g.title).toUpperCase().slice(0, 34), 2, '#000000')}<button class="x" data-x>✕</button></div>
             <div class="zx-sheet-body"><div>
-                ${imgs.length ? `<img class="zx-gal-main" src="${esc(imgs[0].url)}" alt=""><div class="zx-gal-cap" data-cap>${esc(capt[imgs[0].name] || imgs[0].name)}</div>
-                <div class="zx-gal-strip">${imgs.map((i, n) => `<img src="${esc(i.url)}" data-i="${n}" class="${n ? '' : 'on'}" title="${esc(capt[i.name] || i.name)}" alt="">`).join('')}</div>` : '<div class="zx-thumb none" style="aspect-ratio:4/3">NO SCREEN</div>'}
+                ${galleryHtml(imgs, g.docs || [], !!g.hasText)}
                 <div class="zx-h">Controls</div>${keys}
                 ${g.startKey ? `<p style="font-size:12px">Start key: <span class="zx-key">${esc(g.startKey)}</span></p>` : ''}
                 ${(g.controlsZXDB || []).length ? `<p style="font-size:12px;color:#bbb">Joystick / options: ${esc(g.controlsZXDB.join(', '))}</p>` : ''}
@@ -887,6 +1013,7 @@
                 ${g.copyright ? `<div class="zx-copy-note"><b>© ${esc(g.availabilityText)}.</b> Its rights holders do not allow its distribution, so ${romImg('SPECTROM', 2, '#ffb3b3', null, 'zx-inl')} only shows its sheet: it never looks for, downloads or plays this game. Look for an authorised release (re-releases, the publisher, the author) to play it.</div>` : ''}
                 <div class="zx-actions">
                     ${playable ? `<button class="zx-btn go" data-play style="font-size:14px;padding:12px 20px"><i class="fas fa-play"></i> LOAD ""</button>` : ''}
+                    ${heartBtn(g.id, g.fav, true)}
                     ${(g.status === 'failed' && !g.copyright) ? '<button class="zx-btn yel" data-again><i class="fas fa-rotate"></i> SEARCH AGAIN</button>' : ''}
                     <a class="zx-btn" href="${esc(g.zxdbUrl)}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> ZXDB entry</a>
                     <button class="zx-btn red" data-del><i class="fas fa-trash"></i> Remove</button>
@@ -906,10 +1033,10 @@
             const close = () => { m.remove(); document.removeEventListener('keydown', onEsc); };
             const onEsc = (ev) => { if (ev.key === 'Escape') close(); };
             document.addEventListener('keydown', onEsc);
+            wireGallery(m, imgs, g.id, g.title);
             m.addEventListener('click', async (ev) => {
                 if (ev.target === m || ev.target.closest('[data-x]')) return close();
-                const th = ev.target.closest('[data-i]');
-                if (th) { const i = imgs[Number(th.dataset.i)]; $('.zx-gal-main', m).src = i.url; $('[data-cap]', m).textContent = capt[i.name] || i.name; $$('.zx-gal-strip img', m).forEach((x) => x.classList.toggle('on', x === th)); }
+                const hf = ev.target.closest('[data-fav]'); if (hf) return this.toggleFav(g.id, !hf.classList.contains('on'), hf);
                 if (ev.target.closest('[data-play]')) {
                     close();
                     new Player(this, g).open(loader);
@@ -937,7 +1064,7 @@
                 <div class="zx-box"><h3><i class="fas fa-robot"></i> Agent status</h3><div data-ast>Loading…</div></div>
                 <div class="zx-box" style="margin-top:14px"><h3>Send it hunting</h3>
                     <div class="zx-row"><input class="zx-in" data-req placeholder="Optional: what to look for, e.g. 'space shooters', '128K music games', 'Ultimate'"></div>
-                    <div class="zx-row"><label>GAMES</label><input class="zx-in" data-count type="number" min="1" max="50" value="10" style="min-width:0;flex:0 0 80px">
+                    <div class="zx-row"><label>GAMES</label><input class="zx-in" data-count type="number" min="1" max="200" value="10" style="min-width:0;flex:0 0 80px">
                     <button class="zx-btn go" data-hunt><i class="fas fa-satellite-dish"></i> HUNT NOW</button><button class="zx-btn red" data-stop><i class="fas fa-stop"></i> STOP</button></div>
                     <p style="font-size:11px;color:#888;line-height:1.6">The agent reads ZXDB, chooses games (with your local AI when there is RAM for it), downloads the ones that may be distributed, boots each one in a headless Spectrum to prove it works, captures screenshots, reads the instructions for the keys and writes the game sheet. Only games whose rights holders allow distribution are downloaded; titles whose distribution is denied are listed with a © sheet (ZXDB data only): nothing of theirs is downloaded.</p></div>
                 <div class="zx-box" style="margin-top:14px"><h3>Search all of ZXDB</h3>
@@ -1059,7 +1186,7 @@
                 const st = s.settings;
                 $('[data-aset]', v).innerHTML = `<div class="zx-row"><label><input type="checkbox" data-s="auto" ${st.autoHunt ? 'checked' : ''}> AUTO HUNT EVERY</label>
                     <input class="zx-in" data-s="hours" type="number" min="1" max="168" value="${st.everyHours}" style="min-width:0;flex:0 0 72px"><label>HOURS ·</label>
-                    <input class="zx-in" data-s="batch" type="number" min="1" max="50" value="${st.batch}" style="min-width:0;flex:0 0 72px"><label>GAMES</label></div>
+                    <input class="zx-in" data-s="batch" type="number" min="1" max="200" value="${st.batch}" style="min-width:0;flex:0 0 72px"><label>GAMES</label></div>
                     <div class="zx-row"><label>© TITLES CATALOGUED IN EACH HUNT (SHEET ONLY)</label><input class="zx-in" data-s="share" type="number" min="0" max="100" value="${Math.round(st.copyrightShare * 100)}" style="min-width:0;flex:0 0 72px"><label>%</label></div>
                     <div class="zx-row"><label>RETRIES OF MISSING GAMES IN EACH HUNT</label><input class="zx-in" data-s="retry" type="number" min="0" max="100" value="${Math.round((st.retryShare != null ? st.retryShare : 0.3) * 100)}" style="min-width:0;flex:0 0 72px"><label>%</label></div>
                     <div class="zx-row"><button class="zx-btn yel" data-saveset>SAVE</button><button class="zx-btn" data-reindex><i class="fas fa-database"></i> REBUILD ZXDB INDEX</button></div>`;

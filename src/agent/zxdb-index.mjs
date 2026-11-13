@@ -6,8 +6,10 @@ import readline from 'readline';
 
 const SPECTRUM_MACHINES = new Set([1, 2, 3, 4, 5, 6, 7, 10]);   // 16K, 16/48K, 48K, 48/128K, 128K, +2, +2A/+3, +2B
 const GAME_GENRE = /^(Adventure Game|Arcade Game|Casual Game|Game:|Puzzle Game|Sport Game|Strategy Game)/;
-// filetypes: 1 loading screen, 2 running screen, 3 opening screen, 5 inlay front, 8 tape image, 10 snapshot, 28 instructions
-const FILETYPES = new Set([1, 2, 3, 5, 8, 10, 21, 22, 28]);   // + 21 covertape version, 22 bugfix tape image
+// filetypes: 8 tape image, 10 snapshot, 21 covertape version, 22 bugfix tape image, 28 instructions (text); pictures for the gallery:
+// 1 loading screen, 2 running screen, 3 opening screen, 4/5/6 inlay side/front/back, 7 media scan, 29 scanned instructions, 30 keyboard overlay,
+// 31 game map, 33 code sheet, 38 original artwork, 42/43 posters, 51 advertisement, 54 promotional material, 60 booklet
+const FILETYPES = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 21, 22, 28, 29, 30, 31, 33, 38, 42, 43, 51, 54, 60]);
 
 function zipEntry(file, wanted) {
     const fd = fs.openSync(file, 'r');
@@ -126,7 +128,7 @@ export async function buildIndex(zipFile, outFile, log = console.log) {
                 const f = { l: r.file_link, s: r.file_size || 0, ft: r.filetype_id, m: r.machinetype_id, d: r.is_demo ? 1 : 0, r: r.release_seq };
                 if ([8, 10, 21, 22].includes(r.filetype_id)) { if (!r.is_demo) e.files.push(f); }
                 else if (r.filetype_id === 28) e.ins.push(r.file_link);
-                else e.img.push([r.filetype_id, r.file_link]);
+                else e.img.push([r.filetype_id, r.file_link, r.file_size || 0]);
                 break;
             }
             case 'releases': if (r.release_seq === 0 && r.release_year) e.y = r.release_year; break;
@@ -149,7 +151,7 @@ export async function buildIndex(zipFile, outFile, log = console.log) {
         if (!e.files.length && !e.img.length) continue;
         games.push(e);
     }
-    const index = { version: 2, built: new Date().toISOString(), source: 'ZXDB (github.com/zxdb/ZXDB)', availability: Object.fromEntries(avail), count: games.length, games };
+    const index = { version: 3, built: new Date().toISOString(), source: 'ZXDB (github.com/zxdb/ZXDB)', availability: Object.fromEntries(avail), count: games.length, games };
     fs.writeFileSync(outFile + '.tmp', JSON.stringify(index));
     fs.renameSync(outFile + '.tmp', outFile);
     const playable = games.filter((g) => g.files.length).length;

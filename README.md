@@ -13,14 +13,14 @@ your progress in 5 slots.
 It is a single Node.js app that runs on your own computer. There are no accounts and no cloud: everything is kept in the
 `data/` folder.
 
-Version **1.0.2** · licence **GPL-3.0-or-later** · see [CHANGELOG.md](CHANGELOG.md)
+Version **1.1.0** · licence **GPL-3.0-or-later** · see [CHANGELOG.md](CHANGELOG.md)
 
 ## Contents
 
 - [Only games that may be distributed](#only-games-that-may-be-distributed) · [Concept](#concept) · [Screenshots](#screenshots) · [Features](#features) · [Keys while playing](#keys-while-playing)
 - [Quick start](#quick-start)
 - [Step-by-step installation](#step-by-step-installation): [what you need](#1-what-you-need) · [Node.js](#2-install-nodejs) · [download](#3-download-spectrom) · [install and start](#4-install-and-start) · [first hunt](#5-open-it-and-run-the-first-hunt) · [stop and start again](#6-stop-it-and-start-it-again)
-- [User guide](#user-guide): [library](#library) · [game sheet](#game-sheet) · [AI agent](#ai-agent-tab) · [playing](#playing) · [controls](#controls-and-joysticks) · [saved games](#saved-games) · [load tape](#load-tape-tab)
+- [User guide](#user-guide): [library](#library) · [favourites](#favourites) · [game sheet](#game-sheet) · [AI agent](#ai-agent-tab) · [playing](#playing) · [controls](#controls-and-joysticks) · [saved games](#saved-games) · [load tape](#load-tape-tab)
 - [Optional: local AI with Ollama](#optional-local-ai-with-ollama)
 - [Run it in the background or at start-up](#run-it-in-the-background-or-at-start-up) · [Docker](#docker) · [Other devices on your network](#use-it-from-other-devices-on-your-network)
 - [Settings](#settings) · [Data folder and backups](#data-folder-and-backups) · [Update](#update) · [Uninstall](#uninstall) · [Troubleshooting](#troubleshooting)
@@ -58,7 +58,7 @@ leaves your browser and is your responsibility: only load files you have the rig
 > The screenshots were taken with the test tape bundled with the tests (`tests/mktap.mjs`), so the game screens show
 > "SPECTROM TEST" instead of the real games.
 
-**Library:** search, filters (genre, 48K/128K, playable or ©) and cards with the agent's verdict.
+**Library:** search, filters (genre, 48K/128K, playable or ©), cards with the agent's verdict and the ♥ favourite heart.
 
 ![Library](docs/images/library.png)
 
@@ -85,6 +85,10 @@ leaves your browser and is your responsibility: only load files you have the rig
 - **Controls**: keyboard, joystick on the arrow keys + Ctrl (Kempston, Sinclair, Cursor or game keys), gamepad (A fire, B space, X enter, Y 1), redefinable
   keys, and the game's own keys read from its instructions.
 - **Screen**: full screen (F11), CRT filter, sharp pixels, volume and pause.
+- **Favourites**: a heart on every game card and sheet; the **♥ FAVOURITES** tab keeps them together.
+- **Full gallery**: every picture ZXDB lists for each game (screens, inlays, media scans, scanned instructions, booklets, maps,
+  original artwork, adverts, posters…) from every source that mirrors it, with a full-screen viewer, PDF links and the
+  original instructions text.
 - **Saved games**: the whole machine (memory, processor, 128K banks and sound chip) as a standard `.Z80` v3 snapshot.
   5 slots per game plus **AUTO**, which is written every time you leave the game. F5 opens the slots and F6 continues the most
   recent save. Each slot has a thumbnail and can be downloaded as `.z80`.
@@ -167,7 +171,7 @@ npm start
 `npm install` downloads the two small libraries SPECTROM uses (Express and pako). `npm start` prints:
 
 ```
-SPECTROM standalone 1.0.2 — open http://127.0.0.1:8484  (data: …/spectrom-standalone/data)
+SPECTROM standalone 1.1.0 — open http://127.0.0.1:8484  (data: …/spectrom-standalone/data)
 ```
 
 Keep that terminal open while you use SPECTROM: it is the server.
@@ -197,16 +201,29 @@ Keep that terminal open while you use SPECTROM: it is the server.
   a card shows a second screenshot.
 - When the library is empty, the button **Send the AI agent hunting** takes you to the agent.
 
+### Favourites
+
+Every card has a **heart** in its top-right corner, and every game sheet has an **ADD TO FAVOURITES** button. Press it and the
+game goes to the **♥ FAVOURITES** tab, which has the same search, genre, machine and order filters as the library. Press the
+heart again to take it out. Favourites are kept in `data/favorites.json` (copy it with your saved games when you back up).
+
 ### Game sheet
 
 Click a card to open its sheet:
 
-- **Pictures**: the screens captured by the agent test, plus the loading screen, in-game screens and cassette inlay from the
-  archives when they exist. Click a thumbnail to see it big.
+- **Gallery**: the screens captured by the agent test and every picture ZXDB lists for the game, grouped: **Screens** (loading,
+  in-game, opening), **Box and media** (inlay front, back and side, media scans), **Instructions** (scanned pages, booklets,
+  keyboard overlays, code sheets), **Maps** and **Artwork and adverts** (original artwork, adverts, posters, promotional
+  material). Click a thumbnail to show it, click the big picture (or ⤢) to open the full-screen viewer: **← →** move, **click** or
+  **+** zooms to the real size (for maps and scans), **↗** opens it in a new tab, **Esc** closes. PDF documents open on their
+  archive (Spectrum Computing or World of Spectrum), and **Read the original instructions** shows the instructions text.
+  Pictures come from every source that has them (see [Game sources](#ai-agent-tab)); up to 4 MB each and 30 MB per game.
+  Games added with an older version get their gallery by themselves, one game every 20 seconds while the agent rests (after
+  updating, the ZXDB index is rebuilt once from the dump on disk).
 - **Controls**: the keys found in the original instructions, the start key, and the joysticks the game supports.
 - **Facts**: year, publisher, authors, genre, machine, players, language, rating, rights, the agent test result and the source
   of the file.
-- **Buttons**: **LOAD ""** plays it; **CONTINUE** (only if you saved it before) resumes your last save; **SEARCH AGAIN**
+- **Buttons**: **LOAD ""** plays it; **ADD TO FAVOURITES** / **IN MY FAVOURITES** keeps it in the favourites tab; **CONTINUE** (only if you saved it before) resumes your last save; **SEARCH AGAIN**
   (failed games) asks the agent to try every source again; **ZXDB entry** opens its page on Spectrum Computing; **Remove**
   deletes it from your library (files and sheet).
 - © titles show a note instead of the LOAD button: SPECTROM never looks for, downloads or plays them.
@@ -214,7 +231,7 @@ Click a card to open its sheet:
 ### AI agent tab
 
 - **Send it hunting**: type an optional request (*"space shooters"*, *"128K music games"*, *"Ultimate"*), choose how many games
-  (1 to 50) and press **HUNT NOW**. **STOP** stops after the current game.
+  (1 to 200) and press **HUNT NOW**. **STOP** stops after the current game.
 - **Search all of ZXDB**: find any Spectrum title and press **ADD** to have the agent fetch and test that one game. Titles with
   no file in ZXDB show **NO FILE**.
 - **Game sources**: the archives the agent uses, in the order it tries them. Untick a source to skip it, **CHECK SOURCES** tests

@@ -13,14 +13,14 @@ ficha. Después lo juegas con un clic y guardas tu partida en 5 ranuras.
 Es una única aplicación Node.js que se ejecuta en tu propio ordenador. Sin cuentas y sin nube: todo se guarda en la carpeta
 `data/`.
 
-Versión **1.0.2** · licencia **GPL-3.0-or-later** · ver [CHANGELOG.md](CHANGELOG.md)
+Versión **1.1.0** · licencia **GPL-3.0-or-later** · ver [CHANGELOG.md](CHANGELOG.md)
 
 ## Índice
 
 - [Solo juegos que se pueden distribuir](#solo-juegos-que-se-pueden-distribuir) · [Concepto](#concepto) · [Capturas](#capturas) · [Funciones](#funciones) · [Teclas durante el juego](#teclas-durante-el-juego)
 - [Inicio rápido](#inicio-rápido)
 - [Instalación paso a paso](#instalación-paso-a-paso): [qué necesitas](#1-qué-necesitas) · [Node.js](#2-instala-nodejs) · [descarga](#3-descarga-spectrom) · [instalar y arrancar](#4-instala-y-arranca) · [primera cacería](#5-ábrelo-y-haz-la-primera-cacería) · [parar y volver a arrancar](#6-páralo-y-vuelve-a-arrancarlo)
-- [Guía de uso](#guía-de-uso): [biblioteca](#biblioteca) · [ficha del juego](#ficha-del-juego) · [agente IA](#pestaña-ai-agent) · [jugar](#jugar) · [controles](#controles-y-joysticks) · [partidas guardadas](#partidas-guardadas) · [cargar cinta](#pestaña-load-tape)
+- [Guía de uso](#guía-de-uso): [biblioteca](#biblioteca) · [favoritos](#favoritos) · [ficha del juego](#ficha-del-juego) · [agente IA](#pestaña-ai-agent) · [jugar](#jugar) · [controles](#controles-y-joysticks) · [partidas guardadas](#partidas-guardadas) · [cargar cinta](#pestaña-load-tape)
 - [Opcional: IA local con Ollama](#opcional-ia-local-con-ollama)
 - [En segundo plano o al encender el ordenador](#en-segundo-plano-o-al-encender-el-ordenador) · [Docker](#docker) · [Otros dispositivos de tu red](#usarlo-desde-otros-dispositivos-de-tu-red)
 - [Ajustes](#ajustes) · [Carpeta de datos y copias](#carpeta-de-datos-y-copias-de-seguridad) · [Actualizar](#actualizar) · [Desinstalar](#desinstalar) · [Problemas y soluciones](#problemas-y-soluciones)
@@ -58,7 +58,7 @@ sale de tu navegador y es responsabilidad tuya: carga solo archivos que tengas d
 > Las capturas se hicieron con la cinta de prueba de los tests (`tests/mktap.mjs`), por eso las pantallas de juego muestran
 > "SPECTROM TEST" en lugar de los juegos reales. La interfaz está en inglés.
 
-**Biblioteca:** búsqueda, filtros (género, 48K/128K, jugable o ©) y fichas con el veredicto del agente.
+**Biblioteca:** búsqueda, filtros (género, 48K/128K, jugable o ©), fichas con el veredicto del agente y el corazón ♥ de favoritos.
 
 ![Biblioteca](docs/images/library.png)
 
@@ -85,6 +85,10 @@ sale de tu navegador y es responsabilidad tuya: carga solo archivos que tengas d
 - **Controles**: teclado, joystick con las flechas + Ctrl (Kempston, Sinclair, Cursor o teclas del juego), mando (A disparo, B espacio, X enter, Y 1), teclas
   redefinibles y las teclas propias del juego sacadas de sus instrucciones.
 - **Pantalla**: pantalla completa (F11), filtro CRT, píxeles nítidos, volumen y pausa.
+- **Favoritos**: un corazón en cada tarjeta y ficha de juego; la pestaña **♥ FAVOURITES** los reúne.
+- **Galería completa**: todas las imágenes que ZXDB tiene de cada juego (pantallas, carátulas, escaneos de la cinta, instrucciones
+  escaneadas, folletos, mapas, ilustraciones originales, anuncios, pósters…) traídas de todas las fuentes que las guardan, con
+  visor a pantalla completa, enlaces a los PDF y el texto original de las instrucciones.
 - **Partidas guardadas**: la máquina entera (memoria, procesador, bancos de 128K y chip de sonido) como snapshot `.Z80` v3
   estándar. 5 ranuras por juego más **AUTO**, que se escribe cada vez que sales del juego. F5 abre las ranuras y F6 continúa
   la última partida. Cada ranura tiene miniatura y se puede descargar como `.z80`.
@@ -167,7 +171,7 @@ npm start
 `npm install` descarga las dos pequeñas librerías que usa SPECTROM (Express y pako). `npm start` muestra:
 
 ```
-SPECTROM standalone 1.0.2 — open http://127.0.0.1:8484  (data: …/spectrom-standalone/data)
+SPECTROM standalone 1.1.0 — open http://127.0.0.1:8484  (data: …/spectrom-standalone/data)
 ```
 
 Deja ese terminal abierto mientras usas SPECTROM: es el servidor.
@@ -199,16 +203,31 @@ La interfaz de SPECTROM está en inglés; aquí tienes qué hace cada parte.
   por encima se ve una segunda captura.
 - Con la biblioteca vacía, el botón **Send the AI agent hunting** te lleva al agente.
 
+### Favoritos
+
+Cada tarjeta tiene un **corazón** en la esquina superior derecha, y cada ficha un botón **ADD TO FAVOURITES**. Púlsalo y el juego
+pasa a la pestaña **♥ FAVOURITES**, que tiene los mismos filtros de búsqueda, género, máquina y orden que la biblioteca. Pulsa
+otra vez el corazón para quitarlo. Los favoritos se guardan en `data/favorites.json` (cópialo junto con tus partidas al hacer
+copia de seguridad).
+
 ### Ficha del juego
 
 Pulsa una tarjeta para abrir su ficha:
 
-- **Imágenes**: las pantallas capturadas en la prueba del agente, más la pantalla de carga, pantallas del juego y la carátula
-  de los archivos cuando existen. Pulsa una miniatura para verla en grande.
+- **Galería**: las pantallas capturadas en la prueba del agente y todas las imágenes que ZXDB tiene del juego, agrupadas:
+  **Screens** (carga, juego, inicio), **Box and media** (carátula portada, trasera y lomo, escaneos de la cinta),
+  **Instructions** (páginas escaneadas, folletos, plantillas de teclado, hojas de códigos), **Maps** y **Artwork and adverts**
+  (ilustraciones originales, anuncios, pósters, material promocional). Pulsa una miniatura para mostrarla y pulsa la imagen grande
+  (o ⤢) para abrir el visor a pantalla completa: **← →** pasan de imagen, **clic** o **+** amplía al tamaño real (para mapas y
+  escaneos), **↗** la abre en otra pestaña y **Esc** cierra. Los documentos PDF se abren en su archivo (Spectrum Computing o
+  World of Spectrum), y **Read the original instructions** muestra el texto de las instrucciones. Las imágenes vienen de todas
+  las fuentes que las tienen (ver [Game sources](#pestaña-ai-agent)); hasta 4 MB cada una y 30 MB por juego. Los juegos
+  añadidos con una versión anterior reciben su galería solos, un juego cada 20 segundos mientras el agente descansa (al
+  actualizar, el índice de ZXDB se reconstruye una vez con el volcado que ya está en el disco).
 - **Controles**: las teclas encontradas en las instrucciones originales, la tecla para empezar y los joysticks que admite.
 - **Datos**: año, editora, autores, género, máquina, jugadores, idioma, nota, derechos, el resultado de la prueba y el origen del
   archivo.
-- **Botones**: **LOAD ""** lo juega; **CONTINUE** (solo si lo guardaste antes) sigue tu última partida; **SEARCH AGAIN** (juegos
+- **Botones**: **LOAD ""** lo juega; **ADD TO FAVOURITES** / **IN MY FAVOURITES** lo guarda en la pestaña de favoritos; **CONTINUE** (solo si lo guardaste antes) sigue tu última partida; **SEARCH AGAIN** (juegos
   fallidos) pide al agente que pruebe otra vez todas las fuentes; **ZXDB entry** abre su página en Spectrum Computing;
   **Remove** lo quita de tu biblioteca (archivos y ficha).
 - Los títulos © muestran un aviso en lugar del botón LOAD: SPECTROM nunca los busca, descarga ni juega.
@@ -216,7 +235,7 @@ Pulsa una tarjeta para abrir su ficha:
 ### Pestaña AI AGENT
 
 - **Send it hunting**: escribe una petición opcional (*"space shooters"*, *"128K music games"*, *"Ultimate"*), elige cuántos
-  juegos (de 1 a 50) y pulsa **HUNT NOW**. **STOP** para después del juego actual.
+  juegos (de 1 a 200) y pulsa **HUNT NOW**. **STOP** para después del juego actual.
 - **Search all of ZXDB**: busca cualquier título de Spectrum y pulsa **ADD** para que el agente descargue y pruebe ese juego.
   Los títulos sin archivo en ZXDB muestran **NO FILE**.
 - **Game sources**: los archivos que usa el agente, en el orden en que los prueba. Desmarca una fuente para saltarla, **CHECK
