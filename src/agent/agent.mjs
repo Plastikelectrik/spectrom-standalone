@@ -12,7 +12,7 @@ import zlib from 'zlib';
 import { buildIndex } from './zxdb-index.mjs';
 import { testGame, screenToPng, detectFormat } from '../tester/spectest.mjs';
 
-const VERSION = '1.1.2';
+const VERSION = '1.2.0';
 const TESTER_V = 2;        // v1.5.1: the tester notices a game that drops back to the BASIC prompt
 const PORT = Number(process.env.SPECTROM_PORT || 8240);
 const HERE = path.dirname(new URL(import.meta.url).pathname);

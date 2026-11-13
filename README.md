@@ -11,7 +11,8 @@ screens, read its original instructions to find the keys, and write a game sheet
 your progress in 5 slots.
 
 It is a single Node.js app that runs on your own computer. There are no accounts and no cloud: everything is kept in the
-`data/` folder.
+`data/` folder. Want to play with friends? The optional [🌐 ONLINE tab](#online-multiplayer-optional) connects to SPECTROM ONLINE
+only when you press CONNECT.
 
 Version **1.1.0** · licence **GPL-3.0-or-later** · see [CHANGELOG.md](CHANGELOG.md)
 
@@ -23,6 +24,7 @@ Version **1.1.0** · licence **GPL-3.0-or-later** · see [CHANGELOG.md](CHANGELO
 - [User guide](#user-guide): [library](#library) · [favourites](#favourites) · [game sheet](#game-sheet) · [AI agent](#ai-agent-tab) · [playing](#playing) · [controls](#controls-and-joysticks) · [saved games](#saved-games) · [load tape](#load-tape-tab)
 - [Optional: local AI with Ollama](#optional-local-ai-with-ollama)
 - [Run it in the background or at start-up](#run-it-in-the-background-or-at-start-up) · [Docker](#docker) · [Other devices on your network](#use-it-from-other-devices-on-your-network)
+- [Online multiplayer (optional)](#online-multiplayer-optional)
 - [Settings](#settings) · [Data folder and backups](#data-folder-and-backups) · [Update](#update) · [Uninstall](#uninstall) · [Troubleshooting](#troubleshooting)
 - [Tests](#tests) · [The emulator core](#the-emulator-core) · [Licence](#licence)
 
@@ -346,6 +348,25 @@ SPECTROM has **no login**, so by default it only answers on this computer. To pl
 Only do this on a network you trust: anyone on it can use SPECTROM, start hunts and delete games. Never open the port to the
 internet.
 
+## Online multiplayer (optional)
+
+The **🌐 ONLINE** tab connects SPECTROM standalone to **SPECTROM ONLINE**, the multiplayer network of the public SPECTROM page
+(<https://plastikelectrik.xyz/spectrom.php>). Nothing is connected until you open the tab and press **CONNECT** (and
+**DISCONNECT** forgets it). Then the tab shows that page: sign in with your Google account and you meet the same players as on the
+public page and in the CMS:
+
+- **Friends** by Gmail address (the invitation waits until that person signs in), **chat** between friends.
+- **Score challenges** (1, 3 or 7 days, with a picture of the screen as proof) and **relay games** (the whole Spectrum passes from
+  one friend to the next).
+- **Live games**: two screens, timed duel, watch me play, same Spectrum · 2 players, pass the controller.
+- Games marked **👥 2P** are for two or more players.
+
+Online, the games come from the shared collection of that server (legal games only), not from your local library, and what you do
+in that tab goes to that server under its privacy notice. Your local games, saves and favourites never leave your computer.
+If Google sign-in does not open inside the tab (some browsers block it in frames), press **OPEN IN A NEW TAB**.
+The page can only be framed from `localhost` / `127.0.0.1`. `SPECTROM_ONLINE=off` hides the tab; another address points it to
+another SPECTROM LANDING server (v1.5.0 or later).
+
 ## Settings
 
 Copy `.env.example` to `.env` (in the SPECTROM folder), change what you need and restart SPECTROM.
@@ -360,6 +381,7 @@ Copy `.env.example` to `.env` (in the SPECTROM folder), change what you need and
 | `SPECTROM_MODEL` | (automatic) | Ollama model to use, e.g. `qwen2.5:1.5b`. |
 | `SPECTROM_ZXDB_URL` | ZXDB on GitHub | Where the ZXDB dump is downloaded from. |
 | `SPECTROM_AGENT` | `on` | `off` serves the page without starting the agent. |
+| `SPECTROM_ONLINE` | `https://plastikelectrik.xyz/spectrom.php` | Page of the 🌐 ONLINE tab (multiplayer). `off` hides the tab. |
 
 ## Data folder and backups
 

@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Plastikelectrik — GNU GPL v3 or later (see LICENSE).
 (function () {
     'use strict';
-    const VERSION = '1.1.2';
+    const VERSION = '1.2.0';
     const API = (window.SPECTROM_API || (location.origin + '/api'));
     const VENDOR = (window.SPECTROM_VENDOR || '/jsspeccy/');
     const $ = (s, r) => (r || document).querySelector(s);
@@ -197,6 +197,8 @@
 .zx-cbody{padding:10px 11px 12px}
 .zx-ctitle{font-weight:700;font-size:13px;color:#fff;line-height:1.3;margin-bottom:4px;min-height:34px}
 .zx-cmeta{font-size:11px;color:var(--zx-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zx-onl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.zx-online{width:100%;height:calc(100vh - 240px);min-height:640px;border:1px solid var(--zx-line);border-radius:6px;background:#000;display:block}
 .zx-badges{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap;z-index:2}
 .zx-machsw{cursor:pointer}.zx-machsw:hover{filter:brightness(1.3);outline:1px solid #ffff00}
 .zx-badge{font:700 10px/1 "IBM Plex Mono","Fira Mono",Menlo,Consolas,monospace;letter-spacing:.08em;padding:4px 6px;background:#000;border:1px solid #d7d7d7;color:#fff}
@@ -917,7 +919,7 @@
             this.root.innerHTML = `<div class="zx-rainbow"><i style="background:${ZX.red}"></i><i style="background:${ZX.yellow}"></i><i style="background:${ZX.green}"></i><i style="background:${ZX.cyan}"></i></div>
             <div class="zx-head"><div class="zx-logo"><div class="zx-logorow">${romImg('SPECTROM', 6, '#ffffff')}<span class="zx-ver" title="SPECTROM version">${romImg('v' + VERSION, 2, '#ffff00')}</span></div><div class="zx-sub">ZX Spectrum 48K · 128K suite · AI curated</div></div>
             <div class="zx-chips" data-chips><span class="zx-chip">Connecting…</span></div></div>
-            <div class="zx-tabs">${[['library', 'LIBRARY'], ['favs', '♥ FAVOURITES'], ['agent', 'AI AGENT'], ['load', 'LOAD TAPE']].map(([k, l]) => `<button class="zx-tab ${k === this.tab ? 'on' : ''}" data-tab-x="${k}">${l}</button>`).join('')}</div>
+            <div class="zx-tabs">${[['library', 'LIBRARY'], ['favs', '♥ FAVOURITES'], ['agent', 'AI AGENT'], ['load', 'LOAD TAPE'], ['online', '🌐 ONLINE']].map(([k, l]) => `<button class="zx-tab ${k === this.tab ? 'on' : ''}" data-tab-x="${k}">${l}</button>`).join('')}</div>
             <div data-view></div>
             <div class="zx-footer">Emulator core: <a href="https://github.com/gasman/jsspeccy3" target="_blank" rel="noopener">JSSpeccy 3</a> by Matt Westcott (GPL-3.0, source and licence in /jsspeccy/). Game data: <a href="https://github.com/zxdb/ZXDB" target="_blank" rel="noopener">ZXDB</a>. Spectrum ROMs © Amstrad, distributed with permission for use in emulators. ${romImg('SPECTROM', 2, '#55555f', null, 'zx-inl')} only downloads and plays games whose rights holders allow distribution; titles marked © are listed only. <a href="https://github.com/Plastikelectrik/spectrom-standalone" target="_blank" rel="noopener">${romImg('SPECTROM', 2, '#77778a', null, 'zx-inl')} standalone</a> · GPL-3.0</div>`;
             this.root.addEventListener('click', (ev) => {
@@ -951,8 +953,38 @@
             const old = $('[data-view]', this.root); const v = old.cloneNode(false); old.replaceWith(v);   // fresh node: no stacked listeners
             if (tab === 'library') this.renderLibrary(v, false);
             else if (tab === 'favs') this.renderLibrary(v, true);
+            else if (tab === 'online') this.renderOnline(v);
             else if (tab === 'agent') this.renderAgent(v);
             else this.renderLoad(v);
+        }
+        // ----- SPECTROM ONLINE: the multiplayer network (opt-in: nothing connects until CONNECT is pressed) -----
+        async renderOnline(v) {
+            v.innerHTML = '<div class="zx-empty">…</div>';
+            const d = await api('/online').catch(() => null); const url = d && d.ok ? d.url : null;
+            if (!url) { v.innerHTML = `<div class="zx-empty">SPECTROM ONLINE is turned off on this computer (SPECTROM_ONLINE=off).</div>`; return; }
+            const host = (() => { try { return new URL(url).host; } catch (e) { return url; } })();
+            const embed = url + (url.includes('?') ? '&' : '?') + 'embed=standalone';
+            const on = (() => { try { return localStorage.getItem('spectrom.online') === url; } catch (e) { return false; } })();
+            const head = `<div class="zx-onl"><div style="flex:1;min-width:260px;font-size:12px;line-height:1.6;color:#bbb"><b style="color:#7ff">SPECTROM ONLINE</b> · ${esc(host)} —
+                play with anybody who has a Google account: friends by Gmail, chat, score challenges, relay games and live games (two screens,
+                timed duel, watch me play, same Spectrum · 2 players, pass the controller).</div>
+                <a class="zx-btn" href="${esc(url)}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> OPEN IN A NEW TAB</a>${on ? '<button class="zx-btn" data-offline>DISCONNECT</button>' : ''}</div>`;
+            if (!on) {
+                v.innerHTML = head + `<div class="zx-box" style="max-width:760px;line-height:1.7;font-size:13px">
+                    <p style="margin-top:0">${romImg('SPECTROM', 2, '#ffffff', null, 'zx-inl')} standalone works <b>only on this computer</b>: your games, saves and favourites stay here.
+                    The ONLINE tab is optional: when you press CONNECT, this tab shows the page of <b>${esc(host)}</b>, where you sign in with Google
+                    and meet other players. From then on, what you do in this tab (your Google name and e-mail, friends, messages, scores and your
+                    screen in live games) goes to that server, under its privacy notice.</p>
+                    <p>Online, the games come from the shared collection of that server (legal games only), not from your local library.
+                    If Google sign-in does not open inside the tab (some browsers block it in frames), use <b>OPEN IN A NEW TAB</b>.</p>
+                    <p style="margin-bottom:0"><button class="zx-btn go" data-online style="font-size:14px;padding:12px 20px"><i class="fas fa-globe"></i> CONNECT</button></p></div>`;
+            } else v.innerHTML = head + `<iframe class="zx-online" src="${esc(embed)}" title="SPECTROM ONLINE" allow="fullscreen; autoplay; gamepad" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+            this.onlViews = this.onlViews || new WeakSet();   // one listener per view (a data- attribute would be copied by show())
+            if (this.onlViews.has(v)) return; this.onlViews.add(v);
+            v.addEventListener('click', (ev) => {
+                if (ev.target.closest('[data-online]')) { try { localStorage.setItem('spectrom.online', url); } catch (e) { /* ignore */ } this.renderOnline(v); }
+                if (ev.target.closest('[data-offline]')) { try { localStorage.removeItem('spectrom.online'); } catch (e) { /* ignore */ } this.renderOnline(v); }
+            });
         }
         // ----- library -----
         renderLibrary(v, favMode) {

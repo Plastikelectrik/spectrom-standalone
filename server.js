@@ -77,6 +77,10 @@ app.use('/api', express.json({ limit: '100kb' }));
 
 // ---------- API: catalogue, agent, emulator files ----------
 app.get('/api/version', (req, res) => res.json({ ok: true, version: VERSION }));
+// SPECTROM ONLINE (multiplayer network): the page of the online server, shown in the ONLINE tab only after the player presses CONNECT.
+// SPECTROM_ONLINE=off hides the tab; any other value is the address of another SPECTROM LANDING (v1.5.0 or later).
+const ONLINE = String(process.env.SPECTROM_ONLINE || 'https://plastikelectrik.xyz/spectrom.php').trim();
+app.get('/api/online', (req, res) => res.json({ ok: true, url: /^off$/i.test(ONLINE) || !/^https?:\/\//.test(ONLINE) ? null : ONLINE }));
 app.get('/api/status', safe(async (req, res) => pass(await svc('/status'), res)));
 app.get('/api/live', safe(async (req, res) => pass(await svc('/live?' + qs(req, ['since'])), res)));
 app.get('/api/sources', safe(async (req, res) => pass(await svc('/sources'), res)));

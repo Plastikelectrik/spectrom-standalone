@@ -11,7 +11,8 @@ de verdad carga y funciona, capturan sus pantallas, leen sus instrucciones origi
 ficha. Después lo juegas con un clic y guardas tu partida en 5 ranuras.
 
 Es una única aplicación Node.js que se ejecuta en tu propio ordenador. Sin cuentas y sin nube: todo se guarda en la carpeta
-`data/`.
+`data/`. ¿Quieres jugar con amigos? La [pestaña 🌐 ONLINE](#multijugador-online-opcional), opcional, se conecta a SPECTROM ONLINE
+solo cuando pulsas CONNECT.
 
 Versión **1.1.0** · licencia **GPL-3.0-or-later** · ver [CHANGELOG.md](CHANGELOG.md)
 
@@ -23,6 +24,7 @@ Versión **1.1.0** · licencia **GPL-3.0-or-later** · ver [CHANGELOG.md](CHANGE
 - [Guía de uso](#guía-de-uso): [biblioteca](#biblioteca) · [favoritos](#favoritos) · [ficha del juego](#ficha-del-juego) · [agente IA](#pestaña-ai-agent) · [jugar](#jugar) · [controles](#controles-y-joysticks) · [partidas guardadas](#partidas-guardadas) · [cargar cinta](#pestaña-load-tape)
 - [Opcional: IA local con Ollama](#opcional-ia-local-con-ollama)
 - [En segundo plano o al encender el ordenador](#en-segundo-plano-o-al-encender-el-ordenador) · [Docker](#docker) · [Otros dispositivos de tu red](#usarlo-desde-otros-dispositivos-de-tu-red)
+- [Multijugador online (opcional)](#multijugador-online-opcional)
 - [Ajustes](#ajustes) · [Carpeta de datos y copias](#carpeta-de-datos-y-copias-de-seguridad) · [Actualizar](#actualizar) · [Desinstalar](#desinstalar) · [Problemas y soluciones](#problemas-y-soluciones)
 - [Tests](#tests) · [El núcleo del emulador](#el-núcleo-del-emulador) · [Licencia](#licencia)
 
@@ -350,6 +352,25 @@ SPECTROM **no tiene login**, así que por defecto solo responde en este ordenado
 Hazlo solo en una red de confianza: cualquiera en ella puede usar SPECTROM, lanzar cacerías y borrar juegos. Nunca abras el
 puerto a internet.
 
+## Multijugador online (opcional)
+
+La pestaña **🌐 ONLINE** conecta SPECTROM standalone con **SPECTROM ONLINE**, la red multijugador de la página pública de SPECTROM
+(<https://plastikelectrik.xyz/spectrom.php>). No se conecta nada hasta que abres la pestaña y pulsas **CONNECT** (y
+**DISCONNECT** lo olvida). Entonces la pestaña muestra esa página: entras con tu cuenta de Google y te encuentras con los mismos
+jugadores que en la página pública y en el CMS:
+
+- **Amigos** por dirección de Gmail (la invitación espera hasta que esa persona entra), **chat** entre amigos.
+- **Retos de puntuación** (1, 3 o 7 días, con una captura de la pantalla como prueba) y **partidas por relevos** (el Spectrum entero
+  pasa de un amigo al siguiente).
+- **Partidas en directo**: dos pantallas, duelo contrarreloj, mírame jugar, mismo Spectrum · 2 jugadores, pasa el mando.
+- Los juegos marcados **👥 2P** son para dos o más jugadores.
+
+Online, los juegos salen de la colección compartida de ese servidor (solo juegos legales), no de tu biblioteca local, y lo que haces
+en esa pestaña va a ese servidor bajo su aviso de privacidad. Tus juegos, partidas y favoritos locales nunca salen de tu ordenador.
+Si el inicio de sesión de Google no se abre dentro de la pestaña (algunos navegadores lo bloquean en marcos), pulsa **OPEN IN A NEW
+TAB**. La página solo se puede integrar desde `localhost` / `127.0.0.1`. `SPECTROM_ONLINE=off` oculta la pestaña; otra dirección la
+lleva a otro servidor SPECTROM LANDING (v1.5.0 o posterior).
+
 ## Ajustes
 
 Copia `.env.example` a `.env` (en la carpeta de SPECTROM), cambia lo que necesites y reinicia SPECTROM.
@@ -364,6 +385,7 @@ Copia `.env.example` a `.env` (en la carpeta de SPECTROM), cambia lo que necesit
 | `SPECTROM_MODEL` | (automático) | Modelo de Ollama a usar, p. ej. `qwen2.5:1.5b`. |
 | `SPECTROM_ZXDB_URL` | ZXDB en GitHub | De dónde se descarga el volcado de ZXDB. |
 | `SPECTROM_AGENT` | `on` | `off` sirve la página sin arrancar el agente. |
+| `SPECTROM_ONLINE` | `https://plastikelectrik.xyz/spectrom.php` | Página de la pestaña 🌐 ONLINE (multijugador). `off` oculta la pestaña. |
 
 ## Carpeta de datos y copias de seguridad
 

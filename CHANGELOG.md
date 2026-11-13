@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — 2026-11-13
+
+- **🌐 ONLINE tab** (optional): SPECTROM ONLINE, the multiplayer network of the public SPECTROM page, inside the standalone —
+  friends by Gmail, chat, score challenges, relay games and live games (two screens, timed duel, watch me play, same Spectrum ·
+  2 players, pass the controller). Nothing connects until you press CONNECT; DISCONNECT forgets it; OPEN IN A NEW TAB when the
+  browser blocks Google sign-in in frames. `SPECTROM_ONLINE` sets the address (`off` hides the tab).
+- Your local library, saves and favourites stay on your computer; online games come from the server's shared collection.
+
 ## 1.1.2 — 2026-11-13
 
 - **Fix**: a game that went back to BASIC, reset the Spectrum or hung when you pressed its start key (e.g. Rainbow Islands on
