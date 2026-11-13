@@ -136,6 +136,10 @@ app.post('/api/settings', safe(async (req, res) => {
     pass(await svc('/settings', { method: 'POST', body }), res);
 }));
 app.post('/api/reindex', safe(async (req, res) => pass(await svc('/index/rebuild', { method: 'POST', body: {} }), res)));
+app.post('/api/game/:id/retest', safe(async (req, res) => {   // test the stored copy again (48K and 128K)
+    if (!ID.test(req.params.id)) return res.status(400).json({ ok: false, error: 'bad id' });
+    pass(await svc('/game/' + req.params.id + '/retest', { method: 'POST', body: { by: 'you' }, timeout: 180000 }), res);
+}));
 app.post('/api/game/:id/delete', safe(async (req, res) => {
     if (!ID.test(req.params.id)) return res.status(400).json({ ok: false, error: 'bad id' });
     pass(await svc('/game/' + req.params.id + '/delete', { method: 'POST', body: {} }), res);

@@ -12,7 +12,8 @@ import zlib from 'zlib';
 import { buildIndex } from './zxdb-index.mjs';
 import { testGame, screenToPng, detectFormat } from '../tester/spectest.mjs';
 
-const VERSION = '1.1.1';
+const VERSION = '1.1.2';
+const TESTER_V = 2;        // v1.5.1: the tester notices a game that drops back to the BASIC prompt
 const PORT = Number(process.env.SPECTROM_PORT || 8240);
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const DATA = path.resolve(process.env.SPECTROM_DATA || path.join(HERE, '..', '..', 'data'));
@@ -431,7 +432,8 @@ function chooseFiles(g) {
     return g.files.filter((f) => hasSource(f.l)).sort((a, b) => score(b) - score(a)).slice(0, 5);
 }
 async function testCandidate(name, data, mt, title) {
-    const order = mt === 5 || mt === 6 || mt === 7 || mt === 10 ? [128, 48] : [48, 128];
+    // 48K/128K titles (mt 4) are tried on 128K first: the 128K version loads everything at once (48K ones are often multiload)
+    const order = mt === 4 || mt === 5 || mt === 6 || mt === 7 || mt === 10 ? [128, 48] : [48, 128];
     let last = null;
     for (const machine of order) {
         team('tester', `Booting ${title || name} on a headless ${machine}K Spectrum`);
@@ -494,7 +496,7 @@ async function processGame(g, ai, by) {
         if (file) {
             const ext = file.fmt;
             fs.writeFileSync(path.join(dir, 'game.' + ext), file.data);
-            Object.assign(rec, { file: { ext, name: file.name, size: file.data.length }, testedMachine: test.machine, test: { reason: test.reason, loadSeconds: test.loadSeconds, reactsTo: test.stats.reactsTo || null } });
+            Object.assign(rec, { file: { ext, name: file.name, size: file.data.length }, testedMachine: test.machine, testerv: TESTER_V, test: { reason: test.reason, loadSeconds: test.loadSeconds, reactsTo: test.stats.reactsTo || null } });
         }
     }
     if (test && test.ok) {
@@ -523,6 +525,38 @@ async function processGame(g, ai, by) {
 // ---------- planner + hunt job ----------
 const job = { running: null, phase: 'idle', done: 0, total: 0, stop: false, current: '' };
 function setPhase(p) { job.phase = p; }
+// ---------- re-test a stored game with the current tester (no download): v1.5.1 repair + RE-TEST button ----------
+async function retestGame(r, why) {
+    if (!r || !r.file) return null;
+    const f = path.join(DATA, 'games', String(r.id), 'game.' + r.file.ext);
+    if (!fs.existsSync(f)) return null;
+    const t = await testCandidate(r.file.name || ('game.' + r.file.ext), fs.readFileSync(f), r.machineType, r.title);
+    const was = r.testedMachine;
+    r.testerv = TESTER_V; r.retestedAt = now();
+    if (t && t.ok) {
+        r.testedMachine = t.machine;
+        r.test = { reason: t.reason, loadSeconds: t.loadSeconds, reactsTo: t.stats.reactsTo || null };
+        if (!r.startKey && t.stats.reactsTo) r.startKey = t.stats.reactsTo;
+        const dir = path.join(DATA, 'games', String(r.id));
+        if (t.png) fs.writeFileSync(path.join(dir, 'cover.png'), t.png);
+        if (t.png2) { fs.writeFileSync(path.join(dir, 'shot.png'), t.png2); if (!(r.images || []).some((i) => i.name === 'shot')) { r.images = r.images || []; const at = r.images.findIndex((i) => i.name === 'cover'); r.images.splice(at + 1, 0, { name: 'shot', ext: 'png' }); } }
+        log(`${r.title}: re-tested (${why}) — OK on ${t.machine}K${was && was !== t.machine ? ` (was ${was}K: it now starts on ${t.machine}K)` : ''} — ${t.reason}`);
+    } else {
+        r.test = Object.assign({}, r.test || {}, { warning: t ? t.reason : 'cannot test' });
+        log(`${r.title}: re-tested (${why}) — FAILS on every machine: ${t ? t.reason : '?'} (kept in the catalog, try SEARCH AGAIN or another copy)`, 'warn');
+    }
+    saveCatalog();
+    return t;
+}
+const needsRetest = (r) => r.file && (r.status === 'ready') && (r.testerv || 1) < TESTER_V;
+function retestTick() {   // one stored game every 15 s while the agent is idle, until all are checked with the new tester
+    if (job.running || galleryBusy) return;
+    const r = Object.values(catalog.games).find(needsRetest);
+    if (!r) return;
+    job.running = 'retest'; setPhase('Re-testing ' + r.title);
+    retestGame(r, 'tester v' + TESTER_V).catch((e) => { r.testerv = TESTER_V; log(`${r.title}: re-test failed: ${e.message}`, 'warn'); saveCatalog(); })
+        .finally(() => { job.running = null; setPhase('idle'); team('idle', 'Waiting for the next hunt'); });
+}
 function catalogStats() {
     const s = { ready: 0, listed: 0, failed: 0, genres: {} };
     for (const r of Object.values(catalog.games)) {
@@ -712,6 +746,14 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': CT[im.ext] || 'application/octet-stream', 'Content-Length': buf.length, 'Cache-Control': 'private, max-age=86400' });
             return res.end(buf);
         }
+        if (p[0] === 'game' && p[1] && p[2] === 'retest' && req.method === 'POST') {   // RE-TEST: the stored copy, with the current tester
+                const b = await body(req);
+                const r = catalog.games[p[1]]; if (!r || !r.file) return send(res, 404, { ok: false, error: 'no stored copy to test' });
+                if (job.running) return send(res, 409, { ok: false, error: 'the agent is busy, try when it ends' });
+                job.running = 'retest'; setPhase('Re-testing ' + r.title);
+                const t = await retestGame(r, 'asked by ' + (b.by || 'a user')).finally(() => { job.running = null; setPhase('idle'); team('idle', 'Waiting for the next hunt'); });
+                return send(res, 200, { ok: true, passed: !!(t && t.ok), machine: r.testedMachine || null, reason: t ? t.reason : 'cannot test' });
+            }
         if (p[0] === 'fav' && p[1] && req.method === 'POST') {   // ♥ favourites
             const b = await body(req); const id = String(Number(p[1]));
             if (!catalog.games[id]) return send(res, 404, { ok: false, error: 'not in the library' });
@@ -817,3 +859,5 @@ server.listen(PORT, '127.0.0.1', () => log(`SPECTROM agent ${VERSION} listening 
 if (fs.existsSync(F.index)) setTimeout(loadIndex, 500);
 setTimeout(() => { if (!job.running) checkSources().then(() => discoverMirrors()).catch((e) => log('Source check failed: ' + e.message, 'warn')); }, 4000);
 setInterval(() => { if (!job.running) checkSources().catch(() => {}); }, 6 * 3600e3).unref();
+setTimeout(() => { const n = Object.values(catalog.games).filter(needsRetest).length; if (n) log(`Tester v${TESTER_V}: ${n} stored game(s) will be re-tested in the background (one every 15 s)`); }, 6000);
+setInterval(retestTick, 15000).unref();

@@ -105,6 +105,7 @@ leaves your browser and is your responsibility: only load files you have the rig
 | F2 | Controls (remap) |
 | F5 | Saved games |
 | F6 | Continue the last save |
+| F7 | Switch 48K / 128K (loads the game again on the other machine, remembered per game) |
 | F8 | Pause |
 | F9 | Reset |
 | F11 | Full screen |
@@ -408,9 +409,10 @@ Everything SPECTROM stores is inside that folder (or in the Docker volume). Node
 | Many games end as **FAILED** / *not found in any source* | An archive may be down or refusing requests: open **Game sources**, press **CHECK SOURCES** and later **SEARCH MISSING AGAIN**. |
 | *less than 3 GB free on disk* | The agent does not hunt with less than 3 GB free, to protect your disk. Free some space. |
 | No sound | Click on the page or press a key once (browsers only start audio after a user action) and check the volume slider and the mute button. |
-| Black screen or the game does not start | Use an up-to-date browser with WebAssembly, reload the page with Ctrl+F5, and try **Reset (F9)**. Some games need 128K: choose a 128K copy or use the sheet's machine. |
+| Black screen or the game does not start | Use an up-to-date browser with WebAssembly, reload the page with Ctrl+F5, and try **Reset (F9)**. Some games need 128K: press the **48K / 128K** badge (F7). |
 | The keys do not respond | Click on the Spectrum screen to give it the focus, and look at **KEYS (F1)** for the game's keys and **CONTROLS (F2)** for the joystick preset. |
 | The game asks for a joystick | Choose *Kempston* (or the option the game lists) in the game menu and the same preset in **CONTROLS (F2)**. |
+| The game goes back to BASIC (or to the *© 1982 Sinclair* screen) when you press its start key | It is usually a 48K version that loads in parts and wants the next part of the tape. Press the **48K / 128K** badge in the player (or **F7**): the 128K version loads everything at once. In the game sheet, **RE-TEST** checks the copy again on both machines. Since v1.1.2 the agent's tester notices this and picks the machine that works. |
 | A saved game will not load | Saves belong to the game and machine they were made with; the slot shows 48K/128K. Try **AUTO** or an older slot. |
 | I can't open it from my phone | By default SPECTROM only answers on this computer: see [Other devices on your network](#use-it-from-other-devices-on-your-network). |
 | Anything else | Look at the **Live log** in the AI AGENT tab and at the terminal, and open an issue on GitHub with those lines. |

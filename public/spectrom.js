@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Plastikelectrik — GNU GPL v3 or later (see LICENSE).
 (function () {
     'use strict';
-    const VERSION = '1.1.1';
+    const VERSION = '1.1.2';
     const API = (window.SPECTROM_API || (location.origin + '/api'));
     const VENDOR = (window.SPECTROM_VENDOR || '/jsspeccy/');
     const $ = (s, r) => (r || document).querySelector(s);
@@ -198,6 +198,7 @@
 .zx-ctitle{font-weight:700;font-size:13px;color:#fff;line-height:1.3;margin-bottom:4px;min-height:34px}
 .zx-cmeta{font-size:11px;color:var(--zx-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .zx-badges{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap;z-index:2}
+.zx-machsw{cursor:pointer}.zx-machsw:hover{filter:brightness(1.3);outline:1px solid #ffff00}
 .zx-badge{font:700 10px/1 "IBM Plex Mono","Fira Mono",Menlo,Consolas,monospace;letter-spacing:.08em;padding:4px 6px;background:#000;border:1px solid #d7d7d7;color:#fff}
 .zx-badge.k48{border-color:#00d7d7;color:#00ffff}.zx-badge.k128{border-color:#d700d7;color:#ff66ff}
 .zx-badge.ok{border-color:#00d700;color:#00ff00}
@@ -515,7 +516,7 @@
             const el = document.createElement('div'); el.className = 'zx-player'; this.el = el;
             el.innerHTML = `<div class="zx-pbar">
                 <span class="t">${esc(g.title || 'ZX Spectrum')}</span>
-                <span class="zx-badge" data-mach>—</span>
+                <button type="button" class="zx-badge zx-machsw" data-mach data-a="machine" title="Switch 48K / 128K and load the game again (F7) — remembered for this game">—</button>
                 <button class="zx-btn" data-a="pause" title="Pause (F8)"><i class="fas fa-pause"></i></button>
                 <button class="zx-btn" data-a="reset" title="Reset (F9)"><i class="fas fa-rotate-left"></i></button>
                 <button class="zx-btn yel" data-a="controls" title="Remap the controls (F2)"><i class="fas fa-gamepad"></i> CONTROLS</button>
@@ -555,10 +556,12 @@
                 await new Promise((ok) => { if (this.emu.isReady) ok(); else this.emu.onReadyHandlers.push(ok); });
                 this.msg('LOADING ' + (g.title || '').toUpperCase().slice(0, 30) + '…', 0);
                 this.stopTape = SFX.tape(8, 0.035 * (this.volume / 100));
+                this.loader = loader;
                 const file = await loader();
-                const machine = file.machine === 128 ? 128 : 48;
-                this.emu.setMachine(machine);
-                $('[data-mach]', el).textContent = machine + 'K'; $('[data-mach]', el).className = 'zx-badge ' + (machine === 128 ? 'k128' : 'k48');
+                const forced = Number(prefs()['mach.' + (g.id || g.title)]);
+                const machine = forced === 48 || forced === 128 ? forced : file.machine === 128 ? 128 : 48;
+                this.emu.setMachine(machine); this.machine = machine;
+                this.showMachine(machine);
                 await this.emu.openData(file.name, file.buf);
                 file.buf = null;    // a © temporary copy only lives inside the emulator memory from here on
                 await new Promise((r) => setTimeout(r, 650));   // let the border stripes play a moment
@@ -604,6 +607,7 @@
             if (a === 'smooth') { this.smooth = !this.smooth; this.savePrefs({ smooth: this.smooth }); this.applyView(); return; }
             if (!e) return;
             if (a === 'pause') { if (e.isRunning) { this.releaseAll(); e.pause(); this.msg('PAUSED — F8 TO CONTINUE', 0); } else { e.start(); this.msg('', 1); } }
+            if (a === 'machine') { this.switchMachine(); return; }
             if (a === 'reset') { this.releaseAll(); e.reset(); this.msg('© 1982 Sinclair Research Ltd', 2000); }
         }
         keyEvent(ev) {
@@ -619,7 +623,7 @@
             const typing = tag === 'TEXTAREA' || (tag === 'INPUT' && !['range', 'checkbox', 'button'].includes(t.type)) || (tag === 'SELECT' && this.remapEl.classList.contains('on'));
             if (typing) return;
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON') t.blur();   // give the keys back to the game
-            const fk = { F1: 'help', F2: 'controls', F5: 'saves', F6: 'continue', F8: 'pause', F9: 'reset', F11: 'fs' }[ev.key];
+            const fk = { F1: 'help', F2: 'controls', F5: 'saves', F6: 'continue', F7: 'machine', F8: 'pause', F9: 'reset', F11: 'fs' }[ev.key];
             if (fk) { ev.preventDefault(); ev.stopPropagation(); if (down && !ev.repeat) this.action(fk); return; }
             if (ev.code === 'Escape' || ev.metaKey) return;
             if (this.press(ev.code, down)) { ev.preventDefault(); ev.stopPropagation(); }
@@ -643,7 +647,7 @@
                 ${g.tips ? `<p style="color:#ffff00">TIP: ${esc(g.tips)}</p>` : ''}
                 ${g.joystick && g.joystick.length ? `<p style="font-size:12px">Supports: ${esc(g.joystick.map((x) => (PRESETS[x] ? PRESETS[x].label : x)).join(', '))}${g.joystick.includes('kempston') ? ' — choose the Kempston option in the game menu and the Kempston preset here' : ''}</p>` : ''}
                 <div class="zx-h">Emulator</div><p style="font-size:12px;line-height:1.8">
-                <span class="zx-key">F1</span> keys · <span class="zx-key">F2</span> controls · <span class="zx-key">F5</span> saves · <span class="zx-key">F6</span> continue last save · <span class="zx-key">F8</span> pause · <span class="zx-key">F9</span> reset · <span class="zx-key">F11</span> fullscreen<br>
+                <span class="zx-key">F1</span> keys · <span class="zx-key">F2</span> controls · <span class="zx-key">F5</span> saves · <span class="zx-key">F6</span> continue last save · <span class="zx-key">F7</span> switch 48K / 128K · <span class="zx-key">F8</span> pause · <span class="zx-key">F9</span> reset · <span class="zx-key">F11</span> fullscreen<br>
                 <span class="zx-key">Shift</span> CAPS SHIFT · <span class="zx-key">Alt</span> SYMBOL SHIFT · <span class="zx-key">Backspace</span> DELETE · Gamepad: A fire · B SPACE · X ENTER · Y 1</p>`;
             $('.zx-help', this.el).innerHTML = html + '<p style="text-align:center;margin-top:14px"><button class="zx-btn yel" data-a="help">CLOSE</button></p>';
             this.side.innerHTML = html;
@@ -765,6 +769,23 @@
                 return true;
             } catch (err) { if (!quiet) { SFX.fail(); this.msg('NOT SAVED: ' + String(err.message || err).toUpperCase().slice(0, 40), 3500); } return false; }
         }
+        showMachine(m) { const b = this.el && $('[data-mach]', this.el); if (b) { b.textContent = m + 'K ⇄'; b.className = 'zx-badge zx-machsw ' + (m === 128 ? 'k128' : 'k48'); } }
+        async switchMachine() {   // 48K ⇄ 128K: load the same game again on the other machine (remembered for this game)
+            const g = this.game; if (!this.emu || !this.loader || this.switching) return;
+            const to = this.machine === 128 ? 48 : 128; this.switching = true;
+            this.msg('LOADING ON ' + to + 'K…', 0);
+            try {
+                const file = await this.loader();
+                this.releaseAll();
+                this.emu.setMachine(to);
+                await this.emu.openData(file.name, file.buf); file.buf = null;
+                if (!this.emu.isRunning) this.emu.start();
+                this.machine = to; this.showMachine(to);
+                savePrefs({ ['mach.' + (g.id || g.title)]: to });
+                SFX.ok(); this.msg('NOW ON ' + to + 'K · REMEMBERED FOR THIS GAME', 3000);
+            } catch (err) { SFX.fail(); this.msg('CANNOT SWITCH: ' + String(err.message || err).toUpperCase().slice(0, 40), 3500); }
+            this.switching = false;
+        }
         async loadSlot(slot) {
             const g = this.game, e = this.emu; if (!e) return;
             try {
@@ -774,8 +795,8 @@
                 if (f.meta && f.meta.machine == snap.model) { snap.halted = !!f.meta.halted; if (Number.isFinite(f.meta.tstates)) snap.tstates = f.meta.tstates; }
                 this.releaseAll();
                 await e.loadState(snap);
-                const el = this.el, m = snap.model === 128 ? 128 : 48;
-                if (el) { $('[data-mach]', el).textContent = m + 'K'; $('[data-mach]', el).className = 'zx-badge ' + (m === 128 ? 'k128' : 'k48'); }
+                const m = snap.model === 128 ? 128 : 48;
+                this.machine = m; this.showMachine(m);
                 if (!e.isRunning) e.start();
                 SFX.ok(); this.msg(slotName(slot) + ' LOADED', 2000);
             } catch (err) { SFX.fail(); this.msg('CANNOT LOAD: ' + String(err.message || err).toUpperCase().slice(0, 40), 3500); }
@@ -912,7 +933,7 @@
             const d = await api('/status').catch(() => null);
             if (d && d.ok) { this.status = d; this.renderChips(); if (this.tab === 'agent') this.renderAgentStatus(); }
             else $('[data-chips]', this.root).innerHTML = `<span class="zx-chip" style="border-color:#ff0000;color:#ff6b6b">AGENT OFFLINE</span>`;
-            const busy = d && d.running;
+            const busy = d && d.running && String(d.running).startsWith('hunt');
             if (this.tab === 'agent') await this.pullLog();
             if (this.wasBusy && !busy && this.tab === 'library') this.loadList(true);
             this.wasBusy = busy;
@@ -1010,12 +1031,14 @@
                 <div class="zx-badges" style="position:static;margin-bottom:6px">${machineBadge(g)}${g.copyright ? '<span class="zx-badge copy">© LISTED ONLY</span>' : '<span class="zx-badge ok">FREE TO DISTRIBUTE</span>'}${g.status === 'ready' || g.status === 'listed' ? '<span class="zx-badge ok">✓ TESTED BY THE AGENT</span>' : ''}</div>
                 <p class="zx-desc">${esc(g.description || '')}</p>
                 ${g.tips ? `<p class="zx-desc" style="color:#ffff00">TIP: ${esc(g.tips)}</p>` : ''}
+                ${g.test && g.test.warning ? `<div class="zx-copy-note" style="border-color:#d7d700;background:#1a1a00;color:#ffffaa"><b>Last re-test failed:</b> ${esc(g.test.warning)}. If it breaks into BASIC, try the other machine with the <b>48K / 128K</b> button of the player (F7), or SEARCH AGAIN from the AI AGENT tab.</div>` : ''}
                 <dl class="zx-facts">${facts}</dl>
                 ${g.notes ? `<div class="zx-h">Notes (ZXDB)</div><p class="zx-desc" style="font-size:12px;white-space:pre-line">${esc(g.notes)}</p>` : ''}
                 ${g.copyright ? `<div class="zx-copy-note"><b>© ${esc(g.availabilityText)}.</b> Its rights holders do not allow its distribution, so ${romImg('SPECTROM', 2, '#ffb3b3', null, 'zx-inl')} only shows its sheet: it never looks for, downloads or plays this game. Look for an authorised release (re-releases, the publisher, the author) to play it.</div>` : ''}
                 <div class="zx-actions">
                     ${playable ? `<button class="zx-btn go" data-play style="font-size:14px;padding:12px 20px"><i class="fas fa-play"></i> LOAD ""</button>` : ''}
                     ${heartBtn(g.id, g.fav, true)}
+                    ${g.file && g.status === 'ready' ? '<button class="zx-btn" data-retest title="Test the stored copy again with the current tester (48K and 128K)"><i class="fas fa-vial"></i> RE-TEST</button>' : ''}
                     ${(g.status === 'failed' && !g.copyright) ? '<button class="zx-btn yel" data-again><i class="fas fa-rotate"></i> SEARCH AGAIN</button>' : ''}
                     <a class="zx-btn" href="${esc(g.zxdbUrl)}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> ZXDB entry</a>
                     <button class="zx-btn red" data-del><i class="fas fa-trash"></i> Remove</button>
@@ -1042,6 +1065,14 @@
                 if (ev.target.closest('[data-play]')) {
                     close();
                     new Player(this, g).open(loader);
+                }
+                const rt = ev.target.closest('[data-retest]');
+                if (rt) {
+                    rt.disabled = true; rt.innerHTML = '<i class="fas fa-spinner fa-spin"></i> TESTING 48K / 128K…';
+                    const r = await api('/game/' + g.id + '/retest', { method: 'POST', body: {} });
+                    if (!r.ok) { toast(r.error, true); rt.disabled = false; rt.innerHTML = '<i class="fas fa-vial"></i> RE-TEST'; return; }
+                    toast(r.passed ? 'Test OK on ' + r.machine + 'K: ' + r.reason : 'The test fails on 48K and 128K: ' + r.reason, !r.passed);
+                    close(); this.openSheet(g.id); return;
                 }
                 if (ev.target.closest('[data-again]')) {
                     const r = await api('/hunt', { method: 'POST', body: { ids: [g.id], count: 1 } });

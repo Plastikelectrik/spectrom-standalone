@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.2 — 2026-11-13
+
+- **Fix**: a game that went back to BASIC, reset the Spectrum or hung when you pressed its start key (e.g. Rainbow Islands on
+  48K, a multiload there) passed the agent test because the screen changed. The tester now checks it after loading and after the
+  start key; that machine then fails and the other one is tried. 48K/128K titles are tested on 128K first.
+- Every game of your library is re-tested once in the background (one every 15 s while the agent is idle); a game that passes on
+  the other machine now starts there, one that fails everywhere is kept with a warning in its sheet.
+- **RE-TEST** button in the game sheet; the player's **48K / 128K** badge is a switch (**F7**), remembered per game.
+- New self-tests: machine-code games that keep running, go back to BASIC, need 128K or hang after SPACE.
+
 ## 1.1.1 — 2026-11-13
 
 - The version is shown next to the SPECTROM logo at the top of the page.

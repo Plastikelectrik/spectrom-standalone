@@ -163,6 +163,20 @@ export function detectFormat(name, u8) {
  * opts: { assets, name, data (Uint8Array), machine: 48|128, seconds (default 50) }
  * returns { ok, reason, machine, format, loadSeconds, stats, png, tapeBlocks }
  */
+// v1.5.1: is the machine sitting at the BASIC prompt after a report (the game broke back into BASIC)?
+// IY still points at ERR_NR, the CPU runs the ROM editor, and ERR_NR holds a report (or the lower screen holds a report)
+// — and it is not a BASIC program waiting at an INPUT (FLAGX bit 5).
+const REPORTS = '0123456789ABCDEFGHIJKLMNOPQR';
+export function basicPrompt(m, frames = 25) {
+    let rom = 0, dead = 0;
+    for (let i = 0; i < frames; i++) { m.runFrame(); if (m.pc() < 0x4000) rom++; if (m.core.getHalted() && !m.core.getIFF1()) dead++; }
+    if (dead === frames) return { report: 'none', dead: true };   // DI + HALT: the machine is dead
+    const c = m.core, errNr = c.peek(0x5c3a), tvFlag = c.peek(0x5c3c), flagX = c.peek(0x5c71);
+    if (m.regs[9] !== 0x5c3a || rom < frames * 0.9 || (flagX & 0x20)) return null;
+    if (errNr === 0xff && !(tvFlag & 0x20)) return null;
+    return { report: errNr === 0xff ? '0' : (REPORTS[errNr + 1] || '?') };
+}
+
 export async function testGame(opts) {
     const u8 = opts.data instanceof Uint8Array ? opts.data : new Uint8Array(opts.data);
     const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
@@ -218,6 +232,8 @@ export async function testGame(opts) {
     if (plainBasic && hashes.size < 4) { res.reason = 'stuck in BASIC (looks like an error report)'; return res; }
     const rich = stats.attrCount >= 3 || stats.colourfulCells > 64;
     if (hashes.size < 2 && !rich) { res.reason = 'screen never changes (frozen)'; return res; }
+    const bp0 = basicPrompt(m);
+    if (bp0) { res.reason = bp0.dead ? 'hangs after loading (machine halted)' : `stops at the BASIC prompt after loading (report ${bp0.report})`; return res; }
     res.ok = true;
     res.png = screenToPng(pngSrc, 1);
     // key probe: does the game react to the usual start keys? (also gives an in-game screenshot)
@@ -228,6 +244,13 @@ export async function testGame(opts) {
             m.key(k, true); for (let f = 0; f < 8; f++) m.runFrame(); m.key(k, false);
             for (let f = 0; f < 60; f++) { m.runFrame(); if (opts.onFrame && f % 20 === 19) opts.onFrame(m.screen(), 'key ' + k); }
             if (hash(m.screen()) !== before) { reacted = k; break; }
+        }
+        const bp = basicPrompt(m, 50);
+        if (bp) {   // the start key threw the game back into BASIC: not playable on this machine (e.g. a 48K multiload)
+            res.ok = false; res.png = null; res.png2 = null;
+            res.reason = bp.dead ? `hangs after pressing ${reacted || 'a key'} (machine halted)` : `drops to BASIC or resets after pressing ${reacted || 'a key'} (report ${bp.report})`;
+            res.stats.reactsTo = reacted;
+            return res;
         }
         if (reacted) {
             for (let f = 0; f < 100; f++) { m.runFrame(); if (opts.onFrame && f % 10 === 9) opts.onFrame(m.screen(), 'playing'); }

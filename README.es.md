@@ -105,6 +105,7 @@ sale de tu navegador y es responsabilidad tuya: carga solo archivos que tengas d
 | F2 | Controles (redefinir) |
 | F5 | Partidas guardadas |
 | F6 | Continuar la última partida |
+| F7 | Cambiar 48K / 128K (carga el juego otra vez en la otra máquina y lo recuerda por juego) |
 | F8 | Pausa |
 | F9 | Reset |
 | F11 | Pantalla completa |
@@ -413,7 +414,8 @@ programa.
 | Muchos juegos acaban en **FAILED** / *not found in any source* | Algún archivo está caído o rechaza peticiones: abre **Game sources**, pulsa **CHECK SOURCES** y más tarde **SEARCH MISSING AGAIN**. |
 | *less than 3 GB free on disk* | El agente no caza con menos de 3 GB libres, para proteger tu disco. Libera espacio. |
 | No hay sonido | Haz clic en la página o pulsa una tecla una vez (los navegadores solo activan el audio tras una acción tuya) y revisa la barra de volumen y el botón de silencio. |
-| Pantalla negra o el juego no arranca | Usa un navegador actualizado con WebAssembly, recarga con Ctrl+F5 y prueba **Reset (F9)**. Algunos juegos necesitan 128K. |
+| Pantalla negra o el juego no arranca | Usa un navegador actualizado con WebAssembly, recarga con Ctrl+F5 y prueba **Reset (F9)**. Algunos juegos necesitan 128K: pulsa la insignia **48K / 128K** (F7). |
+| El juego vuelve al BASIC (o a la pantalla *© 1982 Sinclair*) al pulsar su tecla de inicio | Suele ser una versión 48K que carga por partes y pide el siguiente bloque de la cinta. Pulsa la insignia **48K / 128K** del reproductor (o **F7**): la versión 128K lo carga todo de una vez. En la ficha, **RE-TEST** vuelve a probar la copia en las dos máquinas. Desde la v1.1.2 el probador del agente lo detecta y elige la máquina que funciona. |
 | Las teclas no responden | Haz clic sobre la pantalla del Spectrum para darle el foco y mira **KEYS (F1)** para las teclas del juego y **CONTROLS (F2)** para el joystick. |
 | El juego pide un joystick | Elige *Kempston* (o la opción que liste el juego) en su menú y la misma opción en **CONTROLS (F2)**. |
 | Una partida no carga | Las partidas son del juego y la máquina con que se hicieron; la ranura muestra 48K/128K. Prueba **AUTO** o una ranura anterior. |

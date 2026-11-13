@@ -1,0 +1,30 @@
+// mkmc.mjs — builds small machine-code "games" (BASIC loader + code block) for the self-tests: node tests/mkmc.mjs <dir>
+// game.tap keeps running after SPACE · back.tap returns to BASIC after SPACE · only128.tap goes back to BASIC on a 48K
+// machine but keeps running on 128K · hang.tap stops dead (DI + HALT) after SPACE
+import fs from 'fs';
+import path from 'path';
+const dir = process.argv[2];
+const num = (n) => { const s = String(n); return [...Buffer.from(s), 0x0e, 0, 0, n & 255, n >> 8, 0]; };
+const L10 = [0xFD, ...num(32767), 0x3A, 0xEF, 0x22, 0x22, 0xAF, 0x3A, 0xF9, 0xC0, ...num(32768), 0x0D];   // CLEAR 32767: LOAD ""CODE: RANDOMIZE USR 32768
+const line = (n, b) => [n >> 8, n & 255, b.length & 255, b.length >> 8, ...b];
+const blk = (flag, data) => { let x = flag; data.forEach((d) => { x ^= d; }); const b = [flag, ...data, x]; return [b.length & 255, b.length >> 8, ...b]; };
+// fill the screen, then loop: HALT, cycle one attribute, until SPACE is pressed
+const head = [0x21, 0x00, 0x40, 0x11, 0x01, 0x40, 0x01, 0xff, 0x17, 0x36, 0x55, 0xed, 0xb0, 0x21, 0x00, 0x58, 0x01, 0x00, 0x03,
+    0x7d, 0xe6, 0x3f, 0x77, 0x23, 0x0b, 0x78, 0xb1, 0x20, 0xf6, 0xfb,
+    0x76, 0x3a, 0x00, 0x58, 0x3c, 0xe6, 0x3f, 0x32, 0x00, 0x58, 0x3e, 0x7f, 0xdb, 0xfe, 0xcb, 0x47, 0x20, 0xee];
+// "in game": new colours, keep animating
+const play = [0x3e, 0x02, 0xd3, 0xfe, 0x21, 0x00, 0x58, 0x11, 0x01, 0x58, 0x01, 0xff, 0x02, 0x36, 0x16, 0xed, 0xb0,
+    0x76, 0x3a, 0x00, 0x59, 0x3c, 0xe6, 0x3f, 0x32, 0x00, 0x59, 0x18, 0xf5];
+// 128K check: write C000, page bank 1, write C000, page back, compare — RET (back to BASIC) on a 48K machine
+const only128 = [0x3e, 0xaa, 0x32, 0x00, 0xc0, 0x01, 0xfd, 0x7f, 0x3a, 0x5c, 0x5b, 0xe6, 0xf8, 0xf6, 0x01, 0xed, 0x79,
+    0x3e, 0x55, 0x32, 0x00, 0xc0, 0x3a, 0x5c, 0x5b, 0xed, 0x79, 0x3a, 0x00, 0xc0, 0xfe, 0xaa, 0xc0];
+const tap = (code) => {
+    const prog = line(10, L10);
+    const h1 = [0, ...Buffer.from('mcgame    '), prog.length & 255, prog.length >> 8, 10, 0, prog.length & 255, prog.length >> 8];
+    const h2 = [3, ...Buffer.from('mccode    '), code.length & 255, code.length >> 8, 0x00, 0x80, 0, 0x80];
+    return Buffer.from([...blk(0, h1), ...blk(0xff, prog), ...blk(0, h2), ...blk(0xff, code)]);
+};
+fs.writeFileSync(path.join(dir, 'game.tap'), tap([...head, ...play]));
+fs.writeFileSync(path.join(dir, 'back.tap'), tap([...head, 0xc9]));
+fs.writeFileSync(path.join(dir, 'only128.tap'), tap([...head, ...only128, ...play]));
+fs.writeFileSync(path.join(dir, 'hang.tap'), tap([...head, 0xf3, 0x76]));
