@@ -389,7 +389,8 @@ npm start          # or: pm2 restart spectrom
 
 Your `data/` folder is never touched by an update. With the ZIP download, download the new ZIP, unzip it and copy your old
 `data/` folder (and `.env`, if you made one) into it. With Docker: `git pull && docker compose up -d --build`.
-The [releases page](https://github.com/Plastikelectrik/spectrom-standalone/releases) lists what changed in each version.
+The version you are running is shown next to the SPECTROM logo at the top of the page (and at `/api/version`); the
+[releases page](https://github.com/Plastikelectrik/spectrom-standalone/releases) lists what changed in each version.
 
 ## Uninstall
 

@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Plastikelectrik — GNU GPL v3 or later (see LICENSE).
 (function () {
     'use strict';
-    const VERSION = '1.1.0';
+    const VERSION = '1.1.1';
     const API = (window.SPECTROM_API || (location.origin + '/api'));
     const VENDOR = (window.SPECTROM_VENDOR || '/jsspeccy/');
     const $ = (s, r) => (r || document).querySelector(s);
@@ -166,6 +166,8 @@
 .zx-head{position:relative;display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:14px;z-index:1}
 .zx-logo{display:flex;flex-direction:column;gap:6px;max-width:100%}
 .zx-logo img{max-width:min(380px,100%);height:auto!important}
+.zx-logorow{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.zx-ver{display:inline-block;border:1px solid #555;background:#111;padding:3px 6px;line-height:0}.zx-logo .zx-ver img{max-width:none;display:block}
 .zx-sub{color:var(--zx-mute);font-size:11px;letter-spacing:.25em;text-transform:uppercase}
 .zx-chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;margin-right:220px}
 .zx-chip{border:1px solid var(--zx-line);background:#0d0d10;border-radius:4px;padding:6px 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--zx-mute)}
@@ -892,7 +894,7 @@
         async boot() {
             await loadRomFont();
             this.root.innerHTML = `<div class="zx-rainbow"><i style="background:${ZX.red}"></i><i style="background:${ZX.yellow}"></i><i style="background:${ZX.green}"></i><i style="background:${ZX.cyan}"></i></div>
-            <div class="zx-head"><div class="zx-logo">${romImg('SPECTROM', 6, '#ffffff')}<div class="zx-sub">ZX Spectrum 48K · 128K suite · AI curated</div></div>
+            <div class="zx-head"><div class="zx-logo"><div class="zx-logorow">${romImg('SPECTROM', 6, '#ffffff')}<span class="zx-ver" title="SPECTROM version">${romImg('v' + VERSION, 2, '#ffff00')}</span></div><div class="zx-sub">ZX Spectrum 48K · 128K suite · AI curated</div></div>
             <div class="zx-chips" data-chips><span class="zx-chip">Connecting…</span></div></div>
             <div class="zx-tabs">${[['library', 'LIBRARY'], ['favs', '♥ FAVOURITES'], ['agent', 'AI AGENT'], ['load', 'LOAD TAPE']].map(([k, l]) => `<button class="zx-tab ${k === this.tab ? 'on' : ''}" data-tab-x="${k}">${l}</button>`).join('')}</div>
             <div data-view></div>

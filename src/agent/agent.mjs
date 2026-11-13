@@ -12,7 +12,7 @@ import zlib from 'zlib';
 import { buildIndex } from './zxdb-index.mjs';
 import { testGame, screenToPng, detectFormat } from '../tester/spectest.mjs';
 
-const VERSION = '1.1.0';
+const VERSION = '1.1.1';
 const PORT = Number(process.env.SPECTROM_PORT || 8240);
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const DATA = path.resolve(process.env.SPECTROM_DATA || path.join(HERE, '..', '..', 'data'));

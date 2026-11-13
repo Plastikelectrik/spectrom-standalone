@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 — 2026-11-13
+
+- The version is shown next to the SPECTROM logo at the top of the page.
+
 ## 1.1.0 — 2026-11-13
 
 - **Favourites**: a heart on every game card and an ADD TO FAVOURITES button in every sheet; new **♥ FAVOURITES** tab with

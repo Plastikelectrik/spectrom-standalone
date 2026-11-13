@@ -1,6 +1,6 @@
 {
   "name": "spectrom-standalone",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "ZX Spectrum 48K/128K emulator with an agent that finds, tests and catalogues games whose rights holders allow distribution. Runs on your own computer.",
   "type": "module",
   "main": "server.js",
