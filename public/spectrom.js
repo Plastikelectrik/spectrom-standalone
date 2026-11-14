@@ -3,7 +3,7 @@
 // Copyright (C) 2026 Plastikelectrik — GNU GPL v3 or later (see LICENSE).
 (function () {
     'use strict';
-    const VERSION = '1.2.0';
+    const VERSION = '1.2.1';
     const API = (window.SPECTROM_API || (location.origin + '/api'));
     const VENDOR = (window.SPECTROM_VENDOR || '/jsspeccy/');
     const $ = (s, r) => (r || document).querySelector(s);
@@ -198,7 +198,7 @@
 .zx-ctitle{font-weight:700;font-size:13px;color:#fff;line-height:1.3;margin-bottom:4px;min-height:34px}
 .zx-cmeta{font-size:11px;color:var(--zx-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .zx-onl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-.zx-online{width:100%;height:calc(100vh - 240px);min-height:640px;border:1px solid var(--zx-line);border-radius:6px;background:#000;display:block}
+.zx-online{width:100%;height:calc(100vh - 240px);min-height:640px;border:1px solid var(--zx-line);border-radius:6px;background:#000;display:block;position:relative;z-index:3}
 .zx-badges{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap;z-index:2}
 .zx-machsw{cursor:pointer}.zx-machsw:hover{filter:brightness(1.3);outline:1px solid #ffff00}
 .zx-badge{font:700 10px/1 "IBM Plex Mono","Fira Mono",Menlo,Consolas,monospace;letter-spacing:.08em;padding:4px 6px;background:#000;border:1px solid #d7d7d7;color:#fff}

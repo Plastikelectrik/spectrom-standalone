@@ -45,6 +45,8 @@ for (const model of [48, 128]) {
         && Object.keys(regs).every((k) => back.registers[k] === regs[k]) && back.tstates === 12345 && back.ulaState.borderColour === 3 && back.model === model;
     check(model + 'K snapshot round trip (memory, registers, border, T-states)', same);
 }
+const wk = fs.readFileSync(path.join(ROOT, 'public', 'jsspeccy', 'jsspeccy-worker.js'), 'utf8');
+check('restoring a 128K save writes the AY registers over the next frames (no core hang)', wk.includes('self.__ayq') && !wk.includes('for(let t=0;t<14;t++)o.writePort(65533,t)'));
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failed ? `\n${failed} test(s) FAILED` : '\nall tests passed');
 process.exit(failed ? 1 : 0);

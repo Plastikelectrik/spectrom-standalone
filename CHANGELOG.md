@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 — 2026-11-14
+
+- Saved games of 128K titles (Rainbow Islands, Target: Renegade…) no longer load frozen. Restoring a 128K snapshot wrote the 14
+  AY sound-chip registers between two frames, and that many register selects hangs the JSSpeccy core; the worker now writes
+  them over the next three frames (`public/jsspeccy/jsspeccy-worker.js`).
+- The rainbow stripes of the page no longer cover the 🌐 ONLINE frame.
+
 ## 1.2.0 — 2026-11-13
 
 - **🌐 ONLINE tab** (optional): SPECTROM ONLINE, the multiplayer network of the public SPECTROM page, inside the standalone —
